@@ -219,7 +219,7 @@ services:
       - kafka
 
   # ---------------------------------------------------------------------------
-  # Streamlit Dashboard
+  # Streamlit Dashboard (lightweight internal tool)
   # Phase 7
   # ---------------------------------------------------------------------------
   dashboard:
@@ -236,6 +236,46 @@ services:
       - price_intelligence_net
     profiles:
       - dashboard
+
+  # ---------------------------------------------------------------------------
+  # FastAPI read-path API  (Phase 7 — fullstack)
+  # Serves dbt mart data → consumed by the React frontend
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      BIGQUERY_DATASET: ${BIGQUERY_DATASET:-price_intelligence}
+      BIGQUERY_LOCATION: ${BIGQUERY_LOCATION:-US}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcp-sa
+      USE_MOCK_DATA: ${USE_MOCK_DATA:-false}
+    volumes:
+      - ./data:/app/data:ro
+    networks:
+      - price_intelligence_net
+    profiles:
+      - fullstack
+
+  # ---------------------------------------------------------------------------
+  # React frontend served by Nginx  (Phase 7 — fullstack)
+  # Nginx proxies /api → api container, serves SPA on /
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - price_intelligence_net
+    profiles:
+      - fullstack
 
   # ---------------------------------------------------------------------------
   # Prometheus — metrics collection

@@ -37,3 +37,6 @@ httpx==0.27.0               # FastAPI TestClient dependency
 python-dotenv==1.0.1
 requests==2.31.0
 pydantic==2.7.0
+
+# Read-path API (Phase 7)
+# fastapi + uvicorn already listed above (sink reuses them)
