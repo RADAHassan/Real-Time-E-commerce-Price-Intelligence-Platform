@@ -259,6 +259,45 @@ bigtable-reset: ## Drop and recreate the 'prices' table (dev reset)
 	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/python -m bigtable.cli init-schema
 
 # =============================================================================
+# Airflow (Phase 4)
+# =============================================================================
+.PHONY: airflow-build
+airflow-build: ## Build the custom Airflow image (includes project deps)
+	docker compose --profile airflow build
+
+.PHONY: airflow-up
+airflow-up: ## Start Airflow (webserver + scheduler + postgres + bigtable emulator)
+	docker compose --profile bigtable --profile airflow up -d
+	@echo "✓ Airflow UI → http://localhost:8081  (admin / admin)"
+
+.PHONY: airflow-init
+airflow-init: ## Initialise the Airflow DB and create admin user
+	docker compose --profile airflow run --rm airflow-init
+
+.PHONY: airflow-trigger-scrape
+airflow-trigger-scrape: ## Manually trigger daily_full_scrape DAG run
+	docker compose --profile airflow exec airflow-webserver \
+		airflow dags trigger daily_full_scrape
+
+.PHONY: airflow-trigger-dbt
+airflow-trigger-dbt: ## Manually trigger dbt_transformations DAG run
+	docker compose --profile airflow exec airflow-webserver \
+		airflow dags trigger dbt_transformations
+
+.PHONY: airflow-trigger-report
+airflow-trigger-report: ## Manually trigger weekly_stats_report DAG run
+	docker compose --profile airflow exec airflow-webserver \
+		airflow dags trigger weekly_stats_report
+
+.PHONY: airflow-list-dags
+airflow-list-dags: ## List all DAGs registered in Airflow
+	docker compose --profile airflow exec airflow-webserver airflow dags list
+
+.PHONY: test-airflow
+test-airflow: ## Run DAG integrity tests (skipped if airflow not installed)
+	$(PYTEST) tests/airflow/ -v
+
+# =============================================================================
 # dbt
 # =============================================================================
 .PHONY: dbt-deps

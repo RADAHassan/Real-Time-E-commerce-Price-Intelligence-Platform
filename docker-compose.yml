@@ -7,7 +7,9 @@ version: "3.9"
 # =============================================================================
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.1-python3.11
+  build:
+    context: .
+    dockerfile: docker/airflow.Dockerfile
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
@@ -16,10 +18,21 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
     GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/service-account.json
+    GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+    BIGTABLE_INSTANCE_ID: ${BIGTABLE_INSTANCE_ID:-price-intelligence}
+    BIGTABLE_EMULATOR_HOST: bigtable-emulator:8086
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/plugins:/opt/airflow/plugins
     - airflow_logs:/opt/airflow/logs
+    # Project source — so scrapy/bigtable/dbt commands work inside workers
+    - ./scrapers:/opt/airflow/scrapers
+    - ./bigtable:/opt/airflow/bigtable
+    - ./sink:/opt/airflow/sink
+    - ./dbt_project:/opt/airflow/dbt_project
+    - ./analytics:/opt/airflow/analytics
+    - ./data:/opt/airflow/data
+    - ./scrapy.cfg:/opt/airflow/scrapy.cfg
   depends_on: &airflow-depends-on
     postgres:
       condition: service_healthy
