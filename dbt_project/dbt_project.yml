@@ -16,6 +16,16 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+vars:
+  # Dataset that holds the raw scraped rows loaded by Airflow
+  raw_dataset: price_intelligence_raw
+  # Minimum absolute price (0 = free products allowed)
+  min_price: 0
+  # Alert threshold: price drop ≥ this % triggers mart_price_alerts
+  alert_drop_pct: 5
+  # Rolling window (days) used in alert mart
+  alert_window_days: 7
+
 models:
   price_intelligence:
     staging:

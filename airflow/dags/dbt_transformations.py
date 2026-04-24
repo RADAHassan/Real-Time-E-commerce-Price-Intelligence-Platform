@@ -1,7 +1,9 @@
 """
 DAG: dbt_transformations
-Purpose : Run dbt models in layer order (staging → intermediate → marts),
-          then test and generate docs.  Waits for daily_full_scrape to finish.
+Purpose : (1) Load scraped JSONL files → BigQuery raw table.
+          (2) Run dbt models in layer order (staging → intermediate → marts).
+          (3) Test and generate docs.
+          Waits for daily_full_scrape to finish.
 Schedule: 03:00 UTC every day (1 h after scraping).
 """
 from __future__ import annotations
@@ -10,6 +12,7 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 _DEFAULT_ARGS: dict = {
@@ -21,6 +24,67 @@ _DEFAULT_ARGS: dict = {
 
 _DBT_DIR = "/opt/airflow/dbt_project"
 _DBT = f"cd {_DBT_DIR} && dbt"
+_DATA_DIR = "/opt/airflow/data"
+_RAW_DATASET = "price_intelligence_raw"
+_RAW_TABLE = "prices"
+
+_BQ_SCHEMA = [
+    {"name": "product_id",   "type": "STRING"},
+    {"name": "source",       "type": "STRING"},
+    {"name": "url",          "type": "STRING"},
+    {"name": "title",        "type": "STRING"},
+    {"name": "price",        "type": "FLOAT64"},
+    {"name": "currency",     "type": "STRING"},
+    {"name": "rating",       "type": "FLOAT64"},
+    {"name": "availability", "type": "STRING"},
+    {"name": "category",     "type": "STRING"},
+    {"name": "image_url",    "type": "STRING"},
+    {"name": "scraped_at",   "type": "TIMESTAMP"},
+]
+
+
+def _load_jsonl_to_bigquery(**ctx) -> None:
+    """Upload all scraped JSONL files to the BigQuery raw prices table."""
+    import os
+    from pathlib import Path
+
+    from google.cloud import bigquery  # noqa: PLC0415
+
+    project_id = os.environ["GCP_PROJECT_ID"]
+    location   = os.environ.get("BIGQUERY_LOCATION", "US")
+
+    bq = bigquery.Client(project=project_id)
+
+    # Ensure raw dataset exists
+    dataset_ref = bigquery.Dataset(f"{project_id}.{_RAW_DATASET}")
+    dataset_ref.location = location
+    bq.create_dataset(dataset_ref, exists_ok=True)
+
+    table_id = f"{project_id}.{_RAW_DATASET}.{_RAW_TABLE}"
+    schema   = [bigquery.SchemaField(f["name"], f["type"]) for f in _BQ_SCHEMA]
+
+    job_config = bigquery.LoadJobConfig(
+        schema=schema,
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+        time_partitioning=bigquery.TimePartitioning(field="scraped_at"),
+        ignore_unknown_values=True,
+    )
+
+    jsonl_files = sorted(Path(_DATA_DIR).rglob("*.jsonl"))
+    if not jsonl_files:
+        print(f"No JSONL files found under {_DATA_DIR} — skipping BQ load")
+        return
+
+    loaded = 0
+    for path in jsonl_files:
+        with open(path, "rb") as fh:
+            job = bq.load_table_from_file(fh, table_id, job_config=job_config)
+            job.result()
+        print(f"  Loaded {path.name} → {table_id}")
+        loaded += 1
+
+    print(f"BigQuery load complete: {loaded} file(s) → {table_id}")
 
 
 with DAG(
@@ -46,6 +110,11 @@ with DAG(
         mode="reschedule",
         allowed_states=["success"],
         failed_states=["failed", "skipped"],
+    )
+
+    load_to_bq = PythonOperator(
+        task_id="load_raw_to_bigquery",
+        python_callable=_load_jsonl_to_bigquery,
     )
 
     dbt_deps = BashOperator(
@@ -80,6 +149,7 @@ with DAG(
 
     (
         wait_for_scrape
+        >> load_to_bq
         >> dbt_deps
         >> dbt_staging
         >> dbt_intermediate

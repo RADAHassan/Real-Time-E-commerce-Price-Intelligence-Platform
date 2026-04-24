@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: int_prices_deduped
+    description: >
+      One row per (product_id, scraped_date): the most recent scrape event
+      for each product on each calendar day.  Removes intra-day duplicates
+      produced when a spider runs more than once per day.
+
+  - name: int_price_changes
+    description: >
+      Extends int_prices_deduped with day-over-day price movement columns
+      (prev_price, price_change_pct, price_change_abs) computed via LAG.
+      First observations for a product have NULL in these columns.
+    columns:
+      - name: price_change_pct
+        description: >
+          Percentage change relative to the previous observation:
+          (price - prev_price) / prev_price * 100, rounded to 2 dp.
+          NULL when prev_price is NULL or zero.
+      - name: price_change_abs
+        description: Absolute price change in the product's native currency.
