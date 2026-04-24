@@ -153,7 +153,7 @@ make lint-fix     # auto-fix lint issues
 | **1** | Scrapy spiders (books.toscrape.com + scrapeme.live + jumia.ma + ultrapc.ma + micromagma.ma) | ✅ |
 | **2** | Bigtable emulator + schema design + CLI | ✅ |
 | **3** | NiFi streaming flow + Bigtable sink service | ✅ |
-| **4** | Airflow DAGs (scrape + dbt + reports) | ⬜ |
+| **4** | Airflow DAGs (scrape + dbt + reports) | ✅ |
 | **5** | dbt models + tests + docs | ⬜ |
 | **6** | Statistical analytics notebooks | ⬜ |
 | **7** | Streamlit dashboard (4 pages) | ⬜ |
@@ -184,6 +184,14 @@ make test-cov      # Run pytest + coverage
 make lint          # Ruff linter
 make format        # Black formatter
 make check         # lint + format-check
+
+# Airflow (Phase 4)
+make airflow-build        # Build custom Airflow image
+make airflow-up           # Start Airflow + Bigtable emulator
+make airflow-init         # Init DB + create admin user
+make airflow-trigger-scrape   # Trigger daily_full_scrape DAG
+make airflow-trigger-dbt      # Trigger dbt_transformations DAG
+make airflow-trigger-report   # Trigger weekly_stats_report DAG
 
 # dbt
 make dbt-run       # Run dbt models
