@@ -1,0 +1,28 @@
+[
+  {
+    "operation": "shift",
+    "spec": {
+      "product_id":   "product_id",
+      "source":       "source",
+      "url":          "url",
+      "title":        "title",
+      "price":        "price",
+      "currency":     "currency",
+      "rating":       "rating",
+      "availability": "availability",
+      "category":     "category",
+      "image_url":    "image_url",
+      "scraped_at":   "scraped_at"
+    }
+  },
+  {
+    "operation": "default",
+    "spec": {
+      "pipeline":     "nifi-streaming",
+      "availability": "Unknown",
+      "category":     "",
+      "image_url":    "",
+      "rating":       null
+    }
+  }
+]
