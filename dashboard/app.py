@@ -103,11 +103,18 @@ st.markdown("""
 html, body, [class*="css"] { font-family:'Inter',sans-serif; }
 .stApp { background:#07101f; color:#e2e8f0; }
 #MainMenu, footer { visibility:hidden; }
-header[data-testid="stHeader"] { visibility:hidden; height:0; min-height:0; }
 [data-testid="stDecoration"] { display:none; }
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="stSidebarCollapseButton"],
-button[kind="header"] { visibility:visible !important; opacity:1 !important; }
+
+/* Make the header bar invisible but keep its height so the sidebar arrow lives in it */
+header[data-testid="stHeader"] {
+    background:#07101f !important;
+    border-bottom:none !important;
+    box-shadow:none !important;
+}
+/* Hide only the toolbar buttons inside the header */
+[data-testid="stToolbar"]          { display:none !important; }
+[data-testid="stStatusWidget"]     { display:none !important; }
+.stDeployButton                    { display:none !important; }
 
 /* ── Sidebar ──────────────────────────────────────────────── */
 [data-testid="stSidebar"] {
