@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: price-intelligence
+
+# ── Scrape targets ────────────────────────────────────────────────────────────
+scrape_configs:
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # FastAPI sink service (Phase 3) — exposes /metrics via prometheus-fastapi-instrumentator
+  - job_name: sink_service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['sink:8001']
+    scrape_interval: 30s
+
+  # FastAPI read-path API (Phase 7)
+  - job_name: api_service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['api:8000']
+    scrape_interval: 30s
+
+  # Airflow StatsD exporter (exposes Airflow metrics via StatsD → Prometheus bridge)
+  - job_name: airflow_statsd
+    static_configs:
+      - targets: ['airflow-webserver:8125']
+    scrape_interval: 60s
+
+  # Bigtable emulator — custom exporter would go here if available
+  # - job_name: bigtable_emulator
+  #   static_configs:
+  #     - targets: ['bigtable-emulator:9099']
+
+  # Node exporter (host system metrics) — optional
+  # - job_name: node
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
