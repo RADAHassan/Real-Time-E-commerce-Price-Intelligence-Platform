@@ -150,8 +150,8 @@ make lint-fix     # auto-fix lint issues
 | Phase | Description | Status |
 |---|---|---|
 | **0** | Bootstrap — repo structure, Docker skeleton | ✅ |
-| **1** | Scrapy spiders (books.toscrape.com + scrapeme.live) | ✅ |
-| **2** | Bigtable emulator + schema design + CLI | ⬜ |
+| **1** | Scrapy spiders (books.toscrape.com + scrapeme.live + jumia.ma + ultrapc.ma + micromagma.ma) | ✅ |
+| **2** | Bigtable emulator + schema design + CLI | ✅ |
 | **3** | NiFi streaming ingestion flow | ⬜ |
 | **4** | Airflow DAGs (scrape + dbt + reports) | ⬜ |
 | **5** | dbt models + tests + docs | ⬜ |

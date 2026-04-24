@@ -1,8 +1,10 @@
 """
-Three-stage item pipeline:
+Four-stage item pipeline:
 
   ValidationPipeline  (100) — drops items with missing/invalid fields
   JsonOutputPipeline  (200) — appends each item as a JSON line to a .jsonl file
+  BigtablePipeline    (250) — writes item to Bigtable emulator / production
+                              (no-op until BIGTABLE_PUSH_ENABLED=true in .env)
   NiFiHttpPipeline    (300) — POSTs the item to NiFi's ListenHTTP endpoint
                               (no-op until NIFI_PUSH_ENABLED=true in .env)
 """
@@ -114,3 +116,43 @@ class NiFiHttpPipeline:
 
     def close_spider(self, spider):
         self._session.close()
+
+
+# ---------------------------------------------------------------------------
+# 3. Bigtable (activated in Phase 2 — set BIGTABLE_PUSH_ENABLED=true)
+# ---------------------------------------------------------------------------
+
+
+class BigtablePipeline:
+    """Writes each validated item to the Bigtable 'prices' table.
+
+    Disabled by default — set BIGTABLE_PUSH_ENABLED=true in .env.
+    Requires the emulator to be running (`make up`) or a real Bigtable instance.
+    Failures are logged as warnings so a Bigtable outage never kills the crawl.
+    """
+
+    def __init__(self, project_id: str, instance_id: str, push_enabled: bool):
+        self.push_enabled = push_enabled
+        self._client = None
+        if push_enabled:
+            from bigtable.client import BigtableClient
+
+            self._client = BigtableClient(project_id, instance_id)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            project_id=crawler.settings.get("GCP_PROJECT_ID", ""),
+            instance_id=crawler.settings.get("BIGTABLE_INSTANCE_ID", "price-intelligence"),
+            push_enabled=crawler.settings.getbool("BIGTABLE_PUSH_ENABLED", False),
+        )
+
+    def process_item(self, item, spider):
+        if not self.push_enabled or self._client is None:
+            return item
+        try:
+            row_key = self._client.write_price_item(dict(item))
+            logger.debug("[%s] Bigtable write OK: %s", spider.name, row_key)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[%s] Bigtable write failed for %s: %s", spider.name, item.get("url"), exc)
+        return item

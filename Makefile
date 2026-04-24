@@ -181,6 +181,31 @@ scrape-books-sample: ## Crawl books.toscrape.com — 2 pages only (quick test)
 	$(VENV)/bin/scrapy crawl books_spider -s MAX_PAGES=2 -s HTTPCACHE_ENABLED=true
 
 # =============================================================================
+# Bigtable (Phase 2)
+# =============================================================================
+.PHONY: bigtable-up
+bigtable-up: ## Start the Bigtable emulator container
+	docker compose --profile bigtable up -d
+	@echo "✓ Bigtable emulator starting on localhost:8086 — wait ~10s then run make bigtable-init"
+
+.PHONY: bigtable-init
+bigtable-init: ## Create the 'prices' table + column families on the emulator
+	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/python -m bigtable.cli init-schema
+
+.PHONY: bigtable-test-write
+bigtable-test-write: ## Write a test record to verify the connection
+	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/python -m bigtable.cli write-test
+
+.PHONY: bigtable-scan
+bigtable-scan: ## Scan and display all rows in the 'prices' table
+	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/python -m bigtable.cli scan-all --limit 50
+
+.PHONY: bigtable-reset
+bigtable-reset: ## Drop and recreate the 'prices' table (dev reset)
+	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/python -m bigtable.cli drop-schema
+	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/python -m bigtable.cli init-schema
+
+# =============================================================================
 # dbt
 # =============================================================================
 .PHONY: dbt-deps

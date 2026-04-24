@@ -52,8 +52,14 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
     "scrapers.pipelines.ValidationPipeline": 100,
     "scrapers.pipelines.JsonOutputPipeline": 200,
+    "scrapers.pipelines.BigtablePipeline": 250,   # activated via BIGTABLE_PUSH_ENABLED
     "scrapers.pipelines.NiFiHttpPipeline": 300,
 }
+
+# Bigtable (Phase 2)
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
+BIGTABLE_INSTANCE_ID = os.getenv("BIGTABLE_INSTANCE_ID", "price-intelligence")
+BIGTABLE_PUSH_ENABLED = os.getenv("BIGTABLE_PUSH_ENABLED", "false").lower() == "true"
 
 # ---------------------------------------------------------------------------
 # HTTP cache — useful during development to avoid hammering sites

@@ -117,15 +117,23 @@ services:
 
   # ---------------------------------------------------------------------------
   # Google Cloud Bigtable Emulator — local time-series storage
-  # Phase 2
+  # Phase 2 — start with: make up  (or: docker compose --profile bigtable up -d)
   # ---------------------------------------------------------------------------
   bigtable-emulator:
-    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    # 'emulators' tag is a slim image (~400 MB vs 1.5 GB for :latest)
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
     command: gcloud beta emulators bigtable start --host-port=0.0.0.0:8086
     ports:
       - "8086:8086"
     environment:
       BIGTABLE_EMULATOR_HOST: 0.0.0.0:8086
+    healthcheck:
+      # bash TCP built-in — works without nc/curl
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8086"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     networks:
       - price_intelligence_net
     profiles:
