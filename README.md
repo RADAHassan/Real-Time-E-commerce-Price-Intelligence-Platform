@@ -150,7 +150,7 @@ make lint-fix     # auto-fix lint issues
 | Phase | Description | Status |
 |---|---|---|
 | **0** | Bootstrap — repo structure, Docker skeleton | ✅ |
-| **1** | Scrapy spiders (books.toscrape.com + quotes.toscrape.com) | ⬜ |
+| **1** | Scrapy spiders (books.toscrape.com + scrapeme.live) | ✅ |
 | **2** | Bigtable emulator + schema design + CLI | ⬜ |
 | **3** | NiFi streaming ingestion flow | ⬜ |
 | **4** | Airflow DAGs (scrape + dbt + reports) | ⬜ |
@@ -191,8 +191,10 @@ make dbt-test      # Run dbt tests
 make dbt-docs      # Generate + serve docs
 
 # Scrapers
-make scrape-books  # Run books spider
-make scrape-all    # Run all spiders
+make scrape-books          # Crawl books.toscrape.com
+make scrape-scrapeme       # Crawl scrapeme.live/shop
+make scrape-books-sample   # 2-page sample (fast, uses HTTP cache)
+make scrape-all            # Run all spiders
 
 # Dashboard
 make dashboard     # Start Streamlit locally

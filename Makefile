@@ -79,7 +79,7 @@ test-cov: ## Run tests with coverage report
 	$(PYTEST) tests/ -v --cov=. --cov-report=term-missing --cov-report=html
 
 .PHONY: test-scrapers
-test-scrapers: ## Run scraper tests only
+test-scrapers: ## Run scraper unit tests (no network — pure HTML fixtures)
 	$(PYTEST) tests/scrapers/ -v
 
 .PHONY: test-fast
@@ -139,16 +139,22 @@ ps: ## Show running containers status
 restart: down up ## Restart core services
 
 # =============================================================================
-# Scrapers
+# Scrapers  (run from repo root — scrapy.cfg is at root)
 # =============================================================================
 .PHONY: scrape-books
-scrape-books: ## Run the books.toscrape.com spider
-	cd scrapers && ../$(VENV)/bin/scrapy crawl books_spider
+scrape-books: ## Crawl books.toscrape.com → data/books_spider/
+	$(VENV)/bin/scrapy crawl books_spider
+
+.PHONY: scrape-scrapeme
+scrape-scrapeme: ## Crawl scrapeme.live/shop → data/scrapeme_spider/
+	$(VENV)/bin/scrapy crawl scrapeme_spider
 
 .PHONY: scrape-all
-scrape-all: ## Run all spiders
-	cd scrapers && ../$(VENV)/bin/scrapy crawl books_spider
-	cd scrapers && ../$(VENV)/bin/scrapy crawl quotes_spider
+scrape-all: scrape-books scrape-scrapeme ## Run all spiders sequentially
+
+.PHONY: scrape-books-sample
+scrape-books-sample: ## Crawl books.toscrape.com — 2 pages only (quick test)
+	$(VENV)/bin/scrapy crawl books_spider -s MAX_PAGES=2 -s HTTPCACHE_ENABLED=true
 
 # =============================================================================
 # dbt
