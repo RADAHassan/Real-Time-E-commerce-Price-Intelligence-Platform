@@ -149,8 +149,24 @@ scrape-books: ## Crawl books.toscrape.com → data/books_spider/
 scrape-scrapeme: ## Crawl scrapeme.live/shop → data/scrapeme_spider/
 	$(VENV)/bin/scrapy crawl scrapeme_spider
 
+.PHONY: scrape-jumia
+scrape-jumia: ## Crawl jumia.ma (ordinateurs + smartphones) → data/jumia_spider/
+	$(VENV)/bin/scrapy crawl jumia_spider
+
+.PHONY: scrape-ultrapc
+scrape-ultrapc: ## Crawl ultrapc.ma (laptops + PC) → data/ultrapc_spider/
+	$(VENV)/bin/scrapy crawl ultrapc_spider
+
+.PHONY: scrape-jumia-sample
+scrape-jumia-sample: ## Crawl jumia.ma — 1 page par catégorie (test rapide)
+	$(VENV)/bin/scrapy crawl jumia_spider -s MAX_PAGES=1 -s HTTPCACHE_ENABLED=true
+
+.PHONY: scrape-ultrapc-sample
+scrape-ultrapc-sample: ## Crawl ultrapc.ma — 1 page par catégorie (test rapide)
+	$(VENV)/bin/scrapy crawl ultrapc_spider -s MAX_PAGES=1 -s HTTPCACHE_ENABLED=true
+
 .PHONY: scrape-all
-scrape-all: scrape-books scrape-scrapeme ## Run all spiders sequentially
+scrape-all: scrape-books scrape-scrapeme scrape-jumia scrape-ultrapc ## Run all spiders sequentially
 
 .PHONY: scrape-books-sample
 scrape-books-sample: ## Crawl books.toscrape.com — 2 pages only (quick test)
