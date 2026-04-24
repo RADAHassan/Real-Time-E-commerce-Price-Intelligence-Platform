@@ -165,8 +165,16 @@ scrape-jumia-sample: ## Crawl jumia.ma — 1 page par catégorie (test rapide)
 scrape-ultrapc-sample: ## Crawl ultrapc.ma — 1 page par catégorie (test rapide)
 	$(VENV)/bin/scrapy crawl ultrapc_spider -s MAX_PAGES=1 -s HTTPCACHE_ENABLED=true
 
+.PHONY: scrape-micromagma
+scrape-micromagma: ## Crawl micromagma.ma → data/micromagma_spider/
+	$(VENV)/bin/scrapy crawl micromagma_spider
+
+.PHONY: scrape-micromagma-sample
+scrape-micromagma-sample: ## Crawl micromagma.ma — 1 page par catégorie (test rapide)
+	$(VENV)/bin/scrapy crawl micromagma_spider -s MAX_PAGES=1 -s HTTPCACHE_ENABLED=true
+
 .PHONY: scrape-all
-scrape-all: scrape-books scrape-scrapeme scrape-jumia scrape-ultrapc ## Run all spiders sequentially
+scrape-all: scrape-books scrape-scrapeme scrape-jumia scrape-ultrapc scrape-micromagma ## Run all spiders sequentially
 
 .PHONY: scrape-books-sample
 scrape-books-sample: ## Crawl books.toscrape.com — 2 pages only (quick test)
