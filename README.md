@@ -154,7 +154,7 @@ make lint-fix     # auto-fix lint issues
 | **2** | Bigtable emulator + schema design + CLI | ✅ |
 | **3** | NiFi streaming flow + Bigtable sink service | ✅ |
 | **4** | Airflow DAGs (scrape + dbt + reports) | ✅ |
-| **5** | dbt models + tests + docs | ⬜ |
+| **5** | dbt models + tests + docs | ✅ |
 | **6** | Statistical analytics notebooks | ⬜ |
 | **7** | Streamlit dashboard (4 pages) | ⬜ |
 | **8** | DataOps: CI/CD, Great Expectations, monitoring | ⬜ |
