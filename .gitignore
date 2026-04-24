@@ -101,6 +101,10 @@ great_expectations/uncommitted/
 scrapers/*.log
 scrapers/output/
 scrapers/.scrapy/
+.scrapy/
+
+# Spider output (JSON lines written by JsonOutputPipeline)
+data/
 
 # =============================================================================
 # Terraform
