@@ -1,0 +1,40 @@
+{
+  "run_at": "2026-04-24T19:31:47.572406+00:00",
+  "rows": 0,
+  "columns": [],
+  "checks": [
+    {
+      "name": "column 'product_id' exists",
+      "passed": false,
+      "detail": "missing"
+    },
+    {
+      "name": "column 'price' exists",
+      "passed": false,
+      "detail": "missing"
+    },
+    {
+      "name": "column 'source' exists",
+      "passed": false,
+      "detail": "missing"
+    },
+    {
+      "name": "column 'title' exists",
+      "passed": false,
+      "detail": "missing"
+    },
+    {
+      "name": "column 'scraped_at' exists",
+      "passed": false,
+      "detail": "missing"
+    },
+    {
+      "name": "dataset is non-empty",
+      "passed": false,
+      "detail": "0 rows loaded"
+    }
+  ],
+  "passed": 0,
+  "failed": 6,
+  "score_pct": 0.0
+}
