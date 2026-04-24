@@ -181,6 +181,59 @@ scrape-books-sample: ## Crawl books.toscrape.com — 2 pages only (quick test)
 	$(VENV)/bin/scrapy crawl books_spider -s MAX_PAGES=2 -s HTTPCACHE_ENABLED=true
 
 # =============================================================================
+# NiFi + Sink (Phase 3)
+# =============================================================================
+.PHONY: nifi-up
+nifi-up: ## Start NiFi + Bigtable Sink containers
+	docker compose --profile bigtable --profile nifi up -d
+	@echo "✓ Bigtable emulator + NiFi + Sink started"
+	@echo "  NiFi UI  → http://localhost:8080/nifi  (admin / adminpassword123)"
+	@echo "  Sink     → http://localhost:8087/health"
+	@echo "  Wait ~90s for NiFi to fully start, then run: make nifi-wait"
+
+.PHONY: nifi-wait
+nifi-wait: ## Block until NiFi is ready to accept API calls
+	$(VENV)/bin/python nifi/scripts/wait_for_nifi.py --url http://localhost:8080 --timeout 180
+
+.PHONY: nifi-deploy
+nifi-deploy: ## Create the price intelligence flow in NiFi via REST API
+	$(VENV)/bin/python nifi/scripts/deploy.py \
+		--nifi-url http://localhost:8080 \
+		--sink-url http://sink:8087/ingest \
+		--listen-port 9191 \
+		--start
+	@echo "✓ Flow deployed — template saved to nifi/templates/"
+
+.PHONY: nifi-deploy-local
+nifi-deploy-local: ## Deploy flow pointing to localhost sink (no Docker network)
+	$(VENV)/bin/python nifi/scripts/deploy.py \
+		--nifi-url http://localhost:8080 \
+		--sink-url http://localhost:8087/ingest \
+		--listen-port 9191 \
+		--start
+
+.PHONY: nifi-dry-run
+nifi-dry-run: ## Preview deploy actions without touching NiFi
+	$(VENV)/bin/python nifi/scripts/deploy.py --dry-run
+
+.PHONY: sink-up
+sink-up: ## Run the Bigtable sink locally (without Docker)
+	BIGTABLE_EMULATOR_HOST=localhost:8086 $(VENV)/bin/uvicorn sink.app:app \
+		--host 0.0.0.0 --port 8087 --reload
+
+.PHONY: sink-test-write
+sink-test-write: ## Send a test item to the running sink
+	$(VENV)/bin/python -c "\
+import requests, json, hashlib, datetime; \
+url='https://www.jumia.ma/hp-test.html'; \
+r=requests.post('http://localhost:8087/ingest', json={ \
+  'product_id': hashlib.md5(url.encode()).hexdigest(), \
+  'source': 'jumia.ma', 'url': url, 'title': 'HP Test [Phase3]', \
+  'price': 4299.0, 'currency': 'MAD', 'pipeline': 'manual-test', \
+  'scraped_at': datetime.datetime.utcnow().isoformat()}); \
+print(r.status_code, r.json())"
+
+# =============================================================================
 # Bigtable (Phase 2)
 # =============================================================================
 .PHONY: bigtable-up
