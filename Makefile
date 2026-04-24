@@ -322,6 +322,58 @@ dbt-docs: ## Generate and serve dbt docs
 	cd dbt_project && ../$(VENV)/bin/dbt docs serve --port 8082
 
 # =============================================================================
+# FastAPI + React fullstack (Phase 7)
+# =============================================================================
+.PHONY: api-up
+api-up: ## Run FastAPI API locally (mock data, no GCP needed)
+	USE_MOCK_DATA=true $(VENV)/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+.PHONY: api-up-bq
+api-up-bq: ## Run FastAPI API against real BigQuery
+	USE_MOCK_DATA=false $(VENV)/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+.PHONY: frontend-install
+frontend-install: ## Install Node dependencies for the React frontend
+	cd frontend && npm ci
+
+.PHONY: frontend-dev
+frontend-dev: ## Start Vite dev server (proxies /api to localhost:8000)
+	cd frontend && npm run dev
+
+.PHONY: frontend-build
+frontend-build: ## Build the React app for production
+	cd frontend && npm run build
+
+.PHONY: up-fullstack
+up-fullstack: ## Start API + React frontend + Bigtable via Docker Compose
+	docker compose --profile bigtable --profile fullstack up -d
+	@echo "✓ Frontend → http://localhost:3000"
+	@echo "  API      → http://localhost:8000"
+
+.PHONY: test-api
+test-api: ## Run FastAPI endpoint tests
+	USE_MOCK_DATA=true $(PYTEST) tests/api/ -v
+
+# =============================================================================
+# Terraform (Phase 9)
+# =============================================================================
+.PHONY: tf-init
+tf-init: ## Initialise Terraform working directory
+	cd infra/terraform && terraform init
+
+.PHONY: tf-plan
+tf-plan: ## Show Terraform execution plan
+	cd infra/terraform && terraform plan -var="project_id=$(GCP_PROJECT_ID)"
+
+.PHONY: tf-apply
+tf-apply: ## Apply Terraform changes (creates GCP resources)
+	cd infra/terraform && terraform apply -var="project_id=$(GCP_PROJECT_ID)" -auto-approve
+
+.PHONY: tf-destroy
+tf-destroy: ## Destroy all GCP resources managed by Terraform
+	cd infra/terraform && terraform destroy -var="project_id=$(GCP_PROJECT_ID)"
+
+# =============================================================================
 # Dashboard
 # =============================================================================
 .PHONY: dashboard

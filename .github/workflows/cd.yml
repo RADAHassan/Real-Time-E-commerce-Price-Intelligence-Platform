@@ -3,14 +3,71 @@ name: CD
 on:
   push:
     branches: [main]
-    tags:
-      - "v*"
+    tags: ["v*"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/price-intelligence
 
 jobs:
-  build-and-push:
+  # ─── Build & push images to GitHub Container Registry ────────────────────
+  build-push:
+    name: Build & push Docker images
     runs-on: ubuntu-latest
-    # Activate this job in Phase 8
-    if: false  # disabled until Phase 8
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - name: api
+            dockerfile: docker/api.Dockerfile
+          - name: sink
+            dockerfile: docker/sink.Dockerfile
+          - name: frontend
+            dockerfile: docker/frontend.Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BASE }}-${{ matrix.name }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Deploy to Cloud Run (GCP) ────────────────────────────────────────────
+  deploy-gcp:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: build-push
+    if: github.ref == 'refs/heads/main'
+    # Requires repo secrets: GCP_SA_KEY, GCP_PROJECT_ID, GCP_REGION
+    environment: production
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,11 +79,25 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
-
-      - name: Build and push scrapers image
+      - name: Deploy API to Cloud Run
         run: |
-          docker build -t ${{ vars.ARTIFACT_REGISTRY_REPO }}/scrapers:${{ github.sha }} \
-            -f docker/scrapers.Dockerfile .
-          docker push ${{ vars.ARTIFACT_REGISTRY_REPO }}/scrapers:${{ github.sha }}
+          gcloud run deploy price-intelligence-api \
+            --image ${{ env.IMAGE_BASE }}-api:${{ github.sha }} \
+            --region ${{ vars.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars GCP_PROJECT_ID=${{ vars.GCP_PROJECT_ID }},USE_MOCK_DATA=false \
+            --memory 512Mi \
+            --min-instances 0 \
+            --max-instances 3
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          gcloud run deploy price-intelligence-frontend \
+            --image ${{ env.IMAGE_BASE }}-frontend:${{ github.sha }} \
+            --region ${{ vars.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 256Mi \
+            --min-instances 0 \
+            --max-instances 2

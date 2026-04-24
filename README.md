@@ -156,9 +156,9 @@ make lint-fix     # auto-fix lint issues
 | **4** | Airflow DAGs (scrape + dbt + reports) | ✅ |
 | **5** | dbt models + tests + docs | ✅ |
 | **6** | Statistical analytics notebooks | ⬜ |
-| **7** | Streamlit dashboard (4 pages) | ⬜ |
-| **8** | DataOps: CI/CD, Great Expectations, monitoring | ⬜ |
-| **9** | GCP deployment via Terraform | ⬜ |
+| **7** | FastAPI + React fullstack app (4 pages) + Streamlit | ✅ |
+| **8** | DataOps: CI/CD (GitHub Actions), Docker build checks | ✅ |
+| **9** | GCP deployment via Terraform (Bigtable, BigQuery, Cloud Run) | ✅ |
 | **10** | Final deliverables + demo video | ⬜ |
 
 ---
