@@ -102,8 +102,14 @@ st.markdown("""
 /* ── Base ─────────────────────────────────────────────────── */
 html, body, [class*="css"] { font-family:'Inter',sans-serif; }
 .stApp { background:#07101f; color:#e2e8f0; }
-#MainMenu,footer,header { visibility:hidden; }
+#MainMenu, footer { visibility:hidden; }
+/* hide just the top toolbar, keep sidebar toggle arrow visible */
+header[data-testid="stHeader"] { visibility:hidden; height:0; min-height:0; }
 [data-testid="stDecoration"] { display:none; }
+/* always show the sidebar collapse/expand arrow */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+button[kind="header"] { visibility:visible !important; opacity:1 !important; }
 
 /* ── Sidebar ──────────────────────────────────────────────── */
 [data-testid="stSidebar"] {
