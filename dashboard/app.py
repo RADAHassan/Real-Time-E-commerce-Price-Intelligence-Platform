@@ -111,6 +111,62 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; }
     border-right:1px solid #1a2640;
 }
 
+/* ── Top nav bar ─────────────────────────────────────────── */
+.topnav-bar {
+    position:sticky;
+    top:0;
+    z-index:999;
+    background:rgba(7,16,31,0.92);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid #1a2640;
+    padding:0.55rem 1.2rem 0.55rem;
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+    margin:-1rem -1rem 1.2rem -1rem;
+}
+.topnav-logo {
+    font-size:1rem;
+    font-weight:800;
+    color:#f1f5f9;
+    letter-spacing:-0.02em;
+    margin-right:1rem;
+    white-space:nowrap;
+}
+div[data-topnav="inactive"] > div > button {
+    background:transparent !important;
+    border:1px solid transparent !important;
+    color:#64748b !important;
+    font-size:0.8rem !important;
+    font-weight:500 !important;
+    padding:0.4rem 0.9rem !important;
+    border-radius:8px !important;
+    transition:all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+    white-space:nowrap !important;
+}
+div[data-topnav="inactive"] > div > button:hover {
+    background:#111f38 !important;
+    border-color:#1a2d4a !important;
+    color:#cbd5e1 !important;
+    transform:translateY(-1px) !important;
+}
+div[data-topnav="active"] > div > button {
+    background:linear-gradient(135deg,#1a3a6c 0%,#112d5a 100%) !important;
+    border:1px solid #2563eb !important;
+    color:#93c5fd !important;
+    font-size:0.8rem !important;
+    font-weight:700 !important;
+    padding:0.4rem 0.9rem !important;
+    border-radius:8px !important;
+    box-shadow:0 0 16px rgba(59,130,246,0.25) !important;
+    white-space:nowrap !important;
+}
+/* push main content down to not clip under topnav */
+[data-testid="stMainBlockContainer"] {
+    padding-top:0 !important;
+}
+
 /* ── All Streamlit buttons base reset ────────────────────── */
 .stButton > button {
     font-family:'Inter',sans-serif !important;
@@ -655,7 +711,28 @@ def progress_bars(df: pd.DataFrame, name_col: str, value_col: str, title: str,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Sidebar
+# Top navigation bar  (always visible, even when sidebar is collapsed)
+# ─────────────────────────────────────────────────────────────────────────────
+def _topnav():
+    st.markdown('<div class="topnav-bar">', unsafe_allow_html=True)
+    logo_col, *nav_cols = st.columns([2] + [1.4] * len(PAGES))
+    with logo_col:
+        st.markdown('<div class="topnav-logo">⚡ Price Intelligence</div>', unsafe_allow_html=True)
+    for col, (icon, label, desc) in zip(nav_cols, PAGES):
+        active = st.session_state.page == label
+        with col:
+            st.markdown(f'<div data-topnav="{"active" if active else "inactive"}">', unsafe_allow_html=True)
+            if st.button(f"{icon} {label}", key=f"topnav_{label}", help=desc, use_container_width=True):
+                st.session_state.page = label
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+_topnav()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sidebar  (controls only — nav lives in the topbar above)
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
@@ -669,19 +746,6 @@ with st.sidebar:
     </div>
     <hr>
     """, unsafe_allow_html=True)
-
-    st.markdown('<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#334155;margin-bottom:0.4rem">Navigation</div>', unsafe_allow_html=True)
-
-    for icon, label, desc in PAGES:
-        active = st.session_state.page == label
-        st.markdown(f'<div data-nav-btn="{"active" if active else "inactive"}">', unsafe_allow_html=True)
-        if st.button(f"{icon}  {label}", key=f"nav_{label}", use_container_width=True,
-                     help=desc):
-            st.session_state.page = label
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<hr>", unsafe_allow_html=True)
 
     st.markdown('<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#334155;margin-bottom:0.5rem">Controls</div>', unsafe_allow_html=True)
 
