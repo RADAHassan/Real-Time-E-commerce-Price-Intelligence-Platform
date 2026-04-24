@@ -1,0 +1,244 @@
+version: "3.9"
+
+# =============================================================================
+# Real-Time E-commerce Price Intelligence Platform
+# Docker Compose — services skeleton (Phase 0)
+# Uncomment services as you reach the corresponding phase.
+# =============================================================================
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.1-python3.11
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
+    GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/service-account.json
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/plugins:/opt/airflow/plugins
+    - airflow_logs:/opt/airflow/logs
+  depends_on: &airflow-depends-on
+    postgres:
+      condition: service_healthy
+  networks:
+    - price_intelligence_net
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure: PostgreSQL (Airflow metadata store)
+  # Phase 4
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airflow}
+      POSTGRES_DB: ${POSTGRES_DB:-airflow}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    networks:
+      - price_intelligence_net
+    profiles:
+      - airflow
+
+  # ---------------------------------------------------------------------------
+  # Apache NiFi — streaming ingestion
+  # Phase 3 — uncomment by removing the `profiles` key or running:
+  #   docker compose --profile nifi up
+  # ---------------------------------------------------------------------------
+  nifi:
+    image: apache/nifi:1.25.0
+    environment:
+      SINGLE_USER_CREDENTIALS_USERNAME: ${NIFI_USERNAME:-admin}
+      SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:-adminpassword123}
+      NIFI_WEB_HTTP_PORT: ${NIFI_WEB_HTTP_PORT:-8080}
+    ports:
+      - "${NIFI_WEB_HTTP_PORT:-8080}:8080"
+    volumes:
+      - nifi_data:/opt/nifi/nifi-current/data
+      - nifi_logs:/opt/nifi/nifi-current/logs
+      - ./nifi/templates:/opt/nifi/nifi-current/conf/templates
+    networks:
+      - price_intelligence_net
+    profiles:
+      - nifi
+
+  # ---------------------------------------------------------------------------
+  # Apache Airflow — batch orchestration
+  # Phase 4
+  # ---------------------------------------------------------------------------
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - airflow
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    profiles:
+      - airflow
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init
+        airflow users create \
+          --username ${AIRFLOW_WWW_USER_USERNAME:-admin} \
+          --password ${AIRFLOW_WWW_USER_PASSWORD:-admin} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com
+    profiles:
+      - airflow
+
+  # ---------------------------------------------------------------------------
+  # Google Cloud Bigtable Emulator — local time-series storage
+  # Phase 2
+  # ---------------------------------------------------------------------------
+  bigtable-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    command: gcloud beta emulators bigtable start --host-port=0.0.0.0:8086
+    ports:
+      - "8086:8086"
+    environment:
+      BIGTABLE_EMULATOR_HOST: 0.0.0.0:8086
+    networks:
+      - price_intelligence_net
+    profiles:
+      - bigtable
+
+  # ---------------------------------------------------------------------------
+  # Apache Kafka + Zookeeper — optional streaming backbone
+  # Phase 3 (alternative to NiFi direct HTTP)
+  # ---------------------------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - price_intelligence_net
+    profiles:
+      - kafka
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - price_intelligence_net
+    profiles:
+      - kafka
+
+  # ---------------------------------------------------------------------------
+  # Streamlit Dashboard
+  # Phase 7
+  # ---------------------------------------------------------------------------
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      BIGTABLE_EMULATOR_HOST: bigtable-emulator:8086
+    volumes:
+      - ./dashboard:/app
+    networks:
+      - price_intelligence_net
+    profiles:
+      - dashboard
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — metrics collection
+  # Phase 8
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - price_intelligence_net
+    profiles:
+      - monitoring
+
+  # ---------------------------------------------------------------------------
+  # Grafana — metrics visualization
+  # Phase 8
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - price_intelligence_net
+    profiles:
+      - monitoring
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+  nifi_data:
+  nifi_logs:
+  airflow_logs:
+  zookeeper_data:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  price_intelligence_net:
+    driver: bridge

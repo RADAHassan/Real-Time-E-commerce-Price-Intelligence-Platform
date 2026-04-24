@@ -1,0 +1,32 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Activate this job in Phase 8
+    if: false  # disabled until Phase 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push scrapers image
+        run: |
+          docker build -t ${{ vars.ARTIFACT_REGISTRY_REPO }}/scrapers:${{ github.sha }} \
+            -f docker/scrapers.Dockerfile .
+          docker push ${{ vars.ARTIFACT_REGISTRY_REPO }}/scrapers:${{ github.sha }}
