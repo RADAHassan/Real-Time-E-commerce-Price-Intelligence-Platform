@@ -27,6 +27,7 @@ _DBT = f"cd {_DBT_DIR} && dbt"
 _DATA_DIR = "/opt/airflow/data"
 _RAW_DATASET = "price_intelligence_raw"
 _RAW_TABLE = "prices"
+_EXPORT_SCRIPT = "/opt/airflow/bigtable/export_to_bigquery.py"
 
 _BQ_SCHEMA = [
     {"name": "product_id",   "type": "STRING"},
@@ -112,9 +113,25 @@ with DAG(
         failed_states=["failed", "skipped"],
     )
 
+    # Path A — JSONL files produced by Scrapy spiders → BigQuery (local dev / CI)
     load_to_bq = PythonOperator(
         task_id="load_raw_to_bigquery",
         python_callable=_load_jsonl_to_bigquery,
+    )
+
+    # Path B — Bigtable (production write path) → BigQuery so dbt can read it.
+    # Runs only when BIGTABLE_PUSH_ENABLED=true; harmless no-op otherwise.
+    export_bigtable_to_bq = BashOperator(
+        task_id="export_bigtable_to_bigquery",
+        bash_command=(
+            "if [ \"${BIGTABLE_PUSH_ENABLED:-false}\" = \"true\" ]; then "
+            f"python {_EXPORT_SCRIPT} "
+            "--project $GCP_PROJECT_ID "
+            "--instance ${BIGTABLE_INSTANCE_ID:-price-intelligence} "
+            f"--dataset {_RAW_DATASET} "
+            f"--table {_RAW_TABLE}; "
+            "else echo 'BIGTABLE_PUSH_ENABLED not set — skipping Bigtable export'; fi"
+        ),
     )
 
     dbt_deps = BashOperator(
@@ -149,7 +166,7 @@ with DAG(
 
     (
         wait_for_scrape
-        >> load_to_bq
+        >> [load_to_bq, export_bigtable_to_bq]   # both paths run in parallel
         >> dbt_deps
         >> dbt_staging
         >> dbt_intermediate

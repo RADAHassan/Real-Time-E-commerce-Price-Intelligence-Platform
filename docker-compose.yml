@@ -180,6 +180,7 @@ services:
       - price_intelligence_net
     profiles:
       - bigtable
+      - nifi       # sink service (profile:nifi) depends_on this; must start together
 
   # ---------------------------------------------------------------------------
   # Apache Kafka + Zookeeper — optional streaming backbone

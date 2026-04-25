@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: price-intelligence
+  labels:
+    app: price-intelligence
+    component: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: dashboard
+  template:
+    metadata:
+      labels:
+        app: price-intelligence
+        component: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: price-intelligence-dashboard:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+          envFrom:
+            - configMapRef:
+                name: platform-config
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: price-intelligence
+spec:
+  selector:
+    component: dashboard
+  ports:
+    - port: 8501
+      targetPort: 8501
+  type: ClusterIP

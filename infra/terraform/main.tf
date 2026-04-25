@@ -234,6 +234,42 @@ resource "google_cloud_run_v2_service" "frontend" {
   depends_on = [google_project_service.apis]
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# BigQuery raw prices table — receives data from both load paths:
+#   • Airflow PythonOperator: JSONL files → BigQuery (dev/CI path)
+#   • bigtable/export_to_bigquery.py: Bigtable rows → BigQuery (prod path)
+# dbt reads from this table as its source (see dbt_project/models/sources.yml)
+# ──────────────────────────────────────────────────────────────────────────────
+
+resource "google_bigquery_table" "raw_prices" {
+  dataset_id          = google_bigquery_dataset.raw.dataset_id
+  table_id            = "prices"
+  deletion_protection = false
+  labels              = local.labels
+
+  time_partitioning {
+    type  = "DAY"
+    field = "scraped_at"
+  }
+
+  schema = jsonencode([
+    { name = "product_id",   type = "STRING",    mode = "NULLABLE" },
+    { name = "source",       type = "STRING",    mode = "NULLABLE" },
+    { name = "url",          type = "STRING",    mode = "NULLABLE" },
+    { name = "title",        type = "STRING",    mode = "NULLABLE" },
+    { name = "price",        type = "FLOAT64",   mode = "NULLABLE" },
+    { name = "currency",     type = "STRING",    mode = "NULLABLE" },
+    { name = "rating",       type = "FLOAT64",   mode = "NULLABLE" },
+    { name = "availability", type = "STRING",    mode = "NULLABLE" },
+    { name = "category",     type = "STRING",    mode = "NULLABLE" },
+    { name = "image_url",    type = "STRING",    mode = "NULLABLE" },
+    { name = "scraped_at",   type = "TIMESTAMP", mode = "NULLABLE" },
+    { name = "exported_at",  type = "TIMESTAMP", mode = "NULLABLE" },
+  ])
+
+  depends_on = [google_bigquery_dataset.raw]
+}
+
 resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
   count    = var.frontend_image != "" ? 1 : 0
   location = google_cloud_run_v2_service.frontend[0].location
