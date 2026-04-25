@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scraper-books
+  namespace: price-intelligence
+  labels:
+    app: price-intelligence
+    component: scraper
+spec:
+  # 02:00 UTC daily — matches the Airflow DAG schedule
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            component: scraper
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: scraper
+              image: price-intelligence-airflow:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - bash
+                - -c
+                - |
+                  cd /opt/airflow
+                  scrapy crawl books_toscrape
+                  scrapy crawl grocery_toscrape
+                  scrapy crawl jumia_ma
+              envFrom:
+                - configMapRef:
+                    name: platform-config
+              resources:
+                requests:
+                  cpu: "200m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              volumeMounts:
+                - name: scraped-data
+                  mountPath: /opt/airflow/data
+          volumes:
+            - name: scraped-data
+              emptyDir: {}

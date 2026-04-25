@@ -1,0 +1,24 @@
+# kubectl apply -k k8s/
+# or for a subset: kubectl apply -k k8s/ --selector component=api
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: price-intelligence
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - api-deployment.yaml
+  - dashboard-deployment.yaml
+  - scraper-cronjob.yaml
+  - ingress.yaml
+  - kafka/kafka-deployment.yaml
+
+images:
+  - name: price-intelligence-api
+    newTag: latest
+  - name: price-intelligence-dashboard
+    newTag: latest
+  - name: price-intelligence-airflow
+    newTag: latest
