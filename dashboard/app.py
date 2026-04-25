@@ -103,18 +103,74 @@ st.markdown("""
 html, body, [class*="css"] { font-family:'Inter',sans-serif; }
 .stApp { background:#07101f; color:#e2e8f0; }
 #MainMenu, footer { visibility:hidden; }
-[data-testid="stDecoration"] { display:none; }
-
-/* Make the header bar invisible but keep its height so the sidebar arrow lives in it */
+[data-testid="stDecoration"]      { display:none !important; }
+[data-testid="stToolbar"]         { display:none !important; }
+[data-testid="stStatusWidget"]    { display:none !important; }
+[data-testid="stAppDeployButton"] { display:none !important; }
+.stDeployButton                   { display:none !important; }
+/* Shrink header to zero without clipping the sidebar arrow (it's fixed-position) */
 header[data-testid="stHeader"] {
-    background:#07101f !important;
-    border-bottom:none !important;
-    box-shadow:none !important;
+    height:0 !important;
+    min-height:0 !important;
+    padding:0 !important;
+    overflow:visible !important;   /* ← key: don't clip children */
+    background:transparent !important;
+    border:none !important;
 }
-/* Hide only the toolbar buttons inside the header */
-[data-testid="stToolbar"]          { display:none !important; }
-[data-testid="stStatusWidget"]     { display:none !important; }
-.stDeployButton                    { display:none !important; }
+/* Sidebar collapse/expand arrow — always on top */
+[data-testid="stSidebarCollapsedControl"] {
+    z-index:9999 !important;
+    visibility:visible !important;
+    opacity:1 !important;
+}
+[data-testid="stSidebarCollapseButton"] {
+    visibility:visible !important;
+    opacity:1 !important;
+}
+/* Remove the extra top padding Streamlit adds */
+.block-container { padding-top:0.5rem !important; }
+
+/* ── Sticky top-nav bar ────────────────────────────────────── */
+.topnav-bar {
+    position:sticky; top:0; z-index:998;
+    background:rgba(7,16,31,0.96);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid #1a2640;
+    padding:0.45rem 1.2rem;
+    display:flex; align-items:center; gap:4px;
+    margin:-0.5rem -1rem 1rem -1rem;
+}
+.topnav-logo {
+    font-size:0.95rem; font-weight:800;
+    color:#f1f5f9; letter-spacing:-0.02em;
+    margin-right:1rem; white-space:nowrap;
+}
+div[data-topnav="inactive"] > div > button {
+    background:transparent !important;
+    border:1px solid transparent !important;
+    color:#475569 !important;
+    font-size:0.8rem !important; font-weight:500 !important;
+    padding:0.35rem 0.85rem !important;
+    border-radius:8px !important;
+    transition:all 0.15s ease !important;
+    white-space:nowrap !important;
+}
+div[data-topnav="inactive"] > div > button:hover {
+    background:#111f38 !important;
+    border-color:#1a2d4a !important;
+    color:#cbd5e1 !important;
+}
+div[data-topnav="active"] > div > button {
+    background:linear-gradient(135deg,#1a3a6c,#112d5a) !important;
+    border:1px solid #2563eb !important;
+    color:#93c5fd !important;
+    font-size:0.8rem !important; font-weight:700 !important;
+    padding:0.35rem 0.85rem !important;
+    border-radius:8px !important;
+    box-shadow:0 0 14px rgba(59,130,246,0.2) !important;
+    white-space:nowrap !important;
+}
 
 /* ── Sidebar ──────────────────────────────────────────────── */
 [data-testid="stSidebar"] {
@@ -610,7 +666,19 @@ def pill_filters(label: str, options: list[str], state_key: str,
     st.markdown(f'<div class="pill-label">{label}</div>', unsafe_allow_html=True)
     all_opts = [all_label] + options
     current  = st.session_state.get(state_key, all_label)
-    cols     = st.columns(len(all_opts))
+    # Cap at 8 columns — beyond that switch to a selectbox to avoid overflow
+    if len(all_opts) > 8:
+        choice = st.selectbox(
+            label, all_opts,
+            index=all_opts.index(current) if current in all_opts else 0,
+            key=f"sel_{state_key}", label_visibility="collapsed",
+        )
+        if choice != current:
+            st.session_state[state_key] = choice
+            st.rerun()
+        return st.session_state.get(state_key, all_label)
+
+    cols = st.columns(len(all_opts))
     for i, opt in enumerate(all_opts):
         active = (opt == current)
         c = color_map.get(opt, "#3b82f6") if (color_map and opt != all_label) else "#3b82f6"
@@ -622,7 +690,7 @@ def pill_filters(label: str, options: list[str], state_key: str,
                 unsafe_allow_html=True,
             )
             lbl = src_meta(opt)["icon"] + " " + src_meta(opt)["label"] if (opt != all_label and opt in SOURCE_META) else opt
-            if st.button(lbl, key=f"pill_{state_key}_{i}", use_container_width=False):
+            if st.button(lbl, key=f"pill_{state_key}_{i}", use_container_width=True):
                 st.session_state[state_key] = opt
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
@@ -663,6 +731,27 @@ def progress_bars(df: pd.DataFrame, name_col: str, value_col: str, title: str,
             <div class="prog-fill" style="width:{pct:.1f}%;--fc1:{c1};--fc2:{c2}"></div>
           </div>
         </div>""", unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sticky top-nav (always visible regardless of sidebar state)
+# ─────────────────────────────────────────────────────────────────────────────
+def _topnav():
+    st.markdown('<div class="topnav-bar">', unsafe_allow_html=True)
+    logo_col, *nav_cols = st.columns([2] + [1.3] * len(PAGES))
+    with logo_col:
+        st.markdown('<div class="topnav-logo">⚡ Price Intelligence</div>', unsafe_allow_html=True)
+    for col, (icon, label, desc) in zip(nav_cols, PAGES):
+        active = st.session_state.page == label
+        with col:
+            st.markdown(f'<div data-topnav="{"active" if active else "inactive"}">', unsafe_allow_html=True)
+            if st.button(f"{icon} {label}", key=f"topnav_{label}", help=desc, use_container_width=True):
+                st.session_state.page = label
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+_topnav()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
