@@ -602,11 +602,11 @@ hr { border:none;border-top:1px solid #1a2640;margin:1rem 0; }
 # ─────────────────────────────────────────────────────────────────────────────
 # Cached data
 # ─────────────────────────────────────────────────────────────────────────────
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=120)
 def _live() -> pd.DataFrame:
-    return load_live(limit=5000)
+    return load_live(limit=100_000)
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def _mart(table: str) -> pd.DataFrame:
     return load_mart(table)
 

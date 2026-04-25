@@ -105,6 +105,9 @@ scrapers/.scrapy/
 
 # Spider output (JSON lines written by JsonOutputPipeline)
 data/
+# Keep the demo dataset in version control
+!data/demo/
+!data/demo/*.jsonl
 
 # =============================================================================
 # Terraform
