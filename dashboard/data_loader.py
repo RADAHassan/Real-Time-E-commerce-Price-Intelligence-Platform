@@ -18,6 +18,7 @@ _SOURCE_MAP = {
     "jumia.ma":           "jumia_ma",
     "ultrapc.ma":         "ultrapc_ma",
     "micromagma.ma":      "micromagma_ma",
+    "cdiscount.com":      "cdiscount",
 }
 
 def _norm_source(s: str) -> str:
