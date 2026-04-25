@@ -73,7 +73,65 @@ class JsonOutputPipeline:
 
 
 # ---------------------------------------------------------------------------
-# 3. NiFi HTTP push (activated in Phase 3)
+# 3. Kafka push (activated by KAFKA_PUSH_ENABLED=true in .env)
+# ---------------------------------------------------------------------------
+
+
+class KafkaPipeline:
+    """Publishes each validated item to the 'price.raw' Kafka topic.
+
+    Disabled by default — set KAFKA_PUSH_ENABLED=true and
+    KAFKA_BOOTSTRAP_SERVERS=localhost:9092 in .env to activate.
+    Start Kafka: docker compose --profile kafka up -d
+    """
+
+    TOPIC = "price.raw"
+
+    def __init__(self, bootstrap_servers: str, push_enabled: bool):
+        self.push_enabled = push_enabled
+        self._producer = None
+        if push_enabled:
+            try:
+                from kafka import KafkaProducer
+                self._producer = KafkaProducer(
+                    bootstrap_servers=bootstrap_servers,
+                    value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
+                    key_serializer=lambda k: k.encode("utf-8") if k else None,
+                    acks=1,
+                    linger_ms=10,
+                )
+                logger.info("[Kafka] Producer ready → %s / %s", bootstrap_servers, self.TOPIC)
+            except Exception as exc:
+                logger.warning("[Kafka] Producer init failed: %s", exc)
+                self._producer = None
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            bootstrap_servers=crawler.settings.get(
+                "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+            push_enabled=crawler.settings.getbool("KAFKA_PUSH_ENABLED", False),
+        )
+
+    def process_item(self, item, spider):
+        if not self.push_enabled or self._producer is None:
+            return item
+        try:
+            key = item.get("product_id") or item.get("title", "")
+            self._producer.send(self.TOPIC, key=key, value=dict(item))
+            logger.debug("[Kafka] sent: %s", key)
+        except Exception as exc:
+            logger.warning("[Kafka] send failed for %s: %s", item.get("url"), exc)
+        return item
+
+    def close_spider(self, spider):
+        if self._producer:
+            self._producer.flush()
+            self._producer.close()
+
+
+# ---------------------------------------------------------------------------
+# 4. NiFi HTTP push (activated in Phase 3)
 # ---------------------------------------------------------------------------
 
 

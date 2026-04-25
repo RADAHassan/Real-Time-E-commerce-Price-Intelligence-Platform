@@ -52,14 +52,22 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
     "scrapers.pipelines.ValidationPipeline": 100,
     "scrapers.pipelines.JsonOutputPipeline": 200,
-    "scrapers.pipelines.BigtablePipeline": 250,   # activated via BIGTABLE_PUSH_ENABLED
-    "scrapers.pipelines.NiFiHttpPipeline": 300,
+    "scrapers.pipelines.BigtablePipeline":   250,  # activated via BIGTABLE_PUSH_ENABLED
+    "scrapers.pipelines.KafkaPipeline":      275,  # activated via KAFKA_PUSH_ENABLED
+    "scrapers.pipelines.NiFiHttpPipeline":   300,
 }
 
 # Bigtable (Phase 2)
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
 BIGTABLE_INSTANCE_ID = os.getenv("BIGTABLE_INSTANCE_ID", "price-intelligence")
 BIGTABLE_PUSH_ENABLED = os.getenv("BIGTABLE_PUSH_ENABLED", "false").lower() == "true"
+
+# ---------------------------------------------------------------------------
+# Kafka streaming (Phase 3)  — set KAFKA_PUSH_ENABLED=true to activate
+# Start broker: docker compose --profile kafka up -d
+# ---------------------------------------------------------------------------
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+KAFKA_PUSH_ENABLED = os.getenv("KAFKA_PUSH_ENABLED", "false").lower() == "true"
 
 # ---------------------------------------------------------------------------
 # HTTP cache — useful during development to avoid hammering sites

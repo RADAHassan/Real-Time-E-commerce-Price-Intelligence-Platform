@@ -5,10 +5,37 @@ Priority chain: Bigtable emulator → BigQuery mart tables → local JSONL files
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
 import pandas as pd
+
+# Map URL-style source names → canonical underscore names
+_SOURCE_MAP = {
+    "books.toscrape.com": "books_toscrape",
+    "scrapeme.live":      "scrapeme_live",
+    "jumia.ma":           "jumia_ma",
+    "ultrapc.ma":         "ultrapc_ma",
+    "micromagma.ma":      "micromagma_ma",
+}
+
+def _norm_source(s: str) -> str:
+    return _SOURCE_MAP.get(str(s).strip().lower(), str(s).strip())
+
+def _norm_availability(s: str) -> str:
+    """Collapse scrapy multi-line availability strings to a clean label."""
+    s = re.sub(r"\s+", " ", str(s)).strip()
+    sl = s.lower()
+    if "out" in sl:
+        return "Out of stock"
+    if "pre" in sl:
+        return "Pre-order"
+    m = re.search(r"(\d+)", sl)
+    if m:
+        n = int(m.group(1))
+        return f"{n} available" if n <= 5 else "In stock"
+    return "In stock"
 
 _ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(_ROOT))
@@ -63,6 +90,9 @@ def _clean(df: pd.DataFrame) -> pd.DataFrame:
         df["source"] = df["spider"]
     if "source" not in df.columns:
         df["source"] = "unknown"
+    df["source"] = df["source"].apply(_norm_source)
+    if "availability" in df.columns:
+        df["availability"] = df["availability"].apply(_norm_availability)
     # Ensure product_id exists — fall back to title+source hash
     if "product_id" not in df.columns:
         df["product_id"] = (df.get("title", "").astype(str)
