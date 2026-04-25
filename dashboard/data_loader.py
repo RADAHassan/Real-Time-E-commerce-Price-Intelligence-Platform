@@ -61,7 +61,17 @@ def _clean(df: pd.DataFrame) -> pd.DataFrame:
         df["scraped_date"] = df["scraped_at"].dt.date
     if "source" not in df.columns and "spider" in df.columns:
         df["source"] = df["spider"]
-    return df.copy()
+    if "source" not in df.columns:
+        df["source"] = "unknown"
+    # Ensure product_id exists — fall back to title+source hash
+    if "product_id" not in df.columns:
+        df["product_id"] = (df.get("title", "").astype(str)
+                            + "_" + df.get("source", "").astype(str)).str.lower().str.replace(r"\W+", "_", regex=True)
+    if "title" not in df.columns:
+        df["title"] = df["product_id"]
+    if "currency" not in df.columns:
+        df["currency"] = "GBP"
+    return df.reset_index(drop=True)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
