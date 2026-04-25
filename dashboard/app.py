@@ -450,14 +450,14 @@ div[data-baseweb="popover"] {
 .kpi-delta-neg { color:#f87171;font-size:0.73rem;font-weight:600;margin-top:0.3rem; }
 
 /* ── Section header ──────────────────────────────────────── */
-.sec {
+.pi-sec {
     display:flex;align-items:center;gap:0.6rem;
     margin:1.5rem 0 0.8rem;
     padding-bottom:0.55rem;
     border-bottom:1px solid #1a2640;
 }
-.sec h3 { font-size:0.95rem;font-weight:600;color:#e2e8f0;margin:0; }
-.sec-badge {
+.pi-sec h3 { font-size:0.95rem;font-weight:600;color:#e2e8f0;margin:0; }
+.pi-sec-badge {
     font-size:0.65rem;font-weight:700;letter-spacing:0.07em;
     text-transform:uppercase;
     background:#111f38;color:#60a5fa;
@@ -594,8 +594,8 @@ hr { border:none;border-top:1px solid #1a2640;margin:1rem 0; }
 ::-webkit-scrollbar-thumb { background:#1a2640;border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:#2d4a6e; }
 
-/* ── Collapse animation helper ───────────────────────────── */
-.block-container { padding-top:1.5rem !important; }
+/* ── Main content top padding ────────────────────────────── */
+.block-container { padding-top:0.25rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -630,8 +630,8 @@ def kpi(label, value, sub="", icon="", color="#3b82f6", delta="", delta_pos=True
 
 
 def sec(title, badge="", icon=""):
-    b = f'<span class="sec-badge">{badge}</span>' if badge else ""
-    st.markdown(f'<div class="sec"><h3>{icon} {title}</h3>{b}</div>', unsafe_allow_html=True)
+    b = f'<span class="pi-sec-badge">{badge}</span>' if badge else ""
+    st.markdown(f'<div class="pi-sec"><h3>{icon} {title}</h3>{b}</div>', unsafe_allow_html=True)
 
 
 def empty():
