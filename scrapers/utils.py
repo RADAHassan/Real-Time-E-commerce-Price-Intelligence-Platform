@@ -52,6 +52,38 @@ def _parse_mad_price(raw: str) -> float:
         return 0.0
 
 
+def _parse_eur_price(raw: str) -> float:
+    """Convert a French-formatted EUR price string to a float.
+
+    Examples handled:
+      "12 499,99 €"     → 12499.99
+      "1\xa0299,00\xa0€" → 1299.0   (non-breaking spaces)
+      "29,99€"          → 29.99
+      "1 299.00 €"      → 1299.0   (dot decimal — rare but present)
+    """
+    if not raw:
+        return 0.0
+    cleaned = re.sub(r"[€\s\xa0]", "", raw).strip()
+    # Same French decimal logic as MAD
+    if "," in cleaned and "." in cleaned:
+        last_comma = cleaned.rfind(",")
+        last_dot = cleaned.rfind(".")
+        if last_comma > last_dot:
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+        else:
+            cleaned = cleaned.replace(",", "")
+    elif "," in cleaned:
+        parts = cleaned.split(",")
+        if len(parts) == 2 and len(parts[1]) == 3 and parts[0].isdigit():
+            cleaned = cleaned.replace(",", "")
+        else:
+            cleaned = cleaned.replace(",", ".")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 0.0
+
+
 def _parse_star_width(style: str) -> float | None:
     """
     Decode Jumia's star rating from inline CSS width.
