@@ -9,17 +9,17 @@
 ## Presentation Order
 
 ```
-[Member 1] Data Engineering & DataOps
+[Member 1] Data Engineering, DataOps & CI/CD
         │
         │  HANDOFF A — "The raw data is in storage. Here is how it gets there."
         ▼
 [Member 2] Data Analytics & Transformation
         │
-        │  HANDOFF B — "The clean mart tables are in BigQuery. Here is what they contain."
+        │  HANDOFF B — "The clean mart tables are in BigQuery. Docker images are built. Time to deploy."
         ▼
-[Member 3] DevOps & Cloud Infrastructure
+[Member 3] Cloud Infrastructure & Monitoring
         │
-        │  HANDOFF C — "Every service is containerised and deployed. Here is how it stays alive."
+        │  HANDOFF C — "Services are running on Kubernetes and observable in Grafana."
         ▼
 [Member 4] Full Stack Development
         │
@@ -32,7 +32,7 @@
 
 ## Member 1 — Data Engineering & DataOps
 **Name:** Hassan RADAH
-**Elevator pitch:** *"I own everything that touches the data before it is clean — collecting it, validating it, routing it, and scheduling it to run every day automatically."*
+**Elevator pitch:** *"I own everything that touches the data before it is clean — collecting it, validating it, routing it, and scheduling it — and I built the entire infrastructure layer that makes it reproducible: Docker, Terraform, and the CI/CD pipeline."*
 
 ### Talking Points
 
@@ -59,11 +59,17 @@
 - The `dbt_transformations` DAG runs at 03:00 UTC — it waits for scraping to finish using an `ExternalTaskSensor`, then loads data into BigQuery via two parallel paths (JSONL files for dev, Bigtable export for production).
 - `analytics/validate_data.py` runs 18 data quality checks — null rate per column, price bounds, IQR outlier rate, timestamp sanity, known source names, rating range. It outputs a JSON report and exits with a non-zero code on failure, which makes it Airflow-compatible.
 
+**5. Docker, Terraform & GitHub Actions CI/CD**
+- I defined the entire local environment in `docker-compose.yml` using **Docker Compose profiles** — `--profile bigtable`, `--profile kafka`, `--profile nifi`, `--profile airflow`, `--profile monitoring`, `--profile fullstack`. Each service has its own Dockerfile in `docker/`. The Airflow image bakes in the scrapers code (`COPY scrapers/`, `bigtable/`, `dbt_project/`) so it works in production without volume mounts.
+- `infra/terraform/main.tf` provisions the entire GCP stack from zero: 8 API activations, Bigtable instance, GCS bucket with 90-day lifecycle, 3 BigQuery datasets, Artifact Registry, and a service account with minimum IAM roles. Everything is reproducible in under 5 minutes.
+- `.github/workflows/ci.yml` runs on every push: lint → tests → dbt compile → React build → 5 Docker images in a matrix job with layer cache. `.github/workflows/cd.yml` pushes images to GHCR and deploys to Cloud Run. `.github/workflows/security.yml` runs weekly: `pip-audit`, `npm audit`, Trivy container scans (SARIF → GitHub Security tab), and gitleaks secret detection.
+
 ### Demo Actions
 1. Open `http://localhost:8081` (Airflow) → show the `daily_full_scrape` DAG graph view.
 2. Run `make scrape-books-sample` in the terminal — show items appearing in `data/books_spider/`.
 3. Show `scrapers/pipelines.py` briefly — point to the 5 stage numbers (100, 200, 250, 275, 300).
 4. Run `python analytics/validate_data.py` — show the 18 checks passing.
+5. Show `.github/workflows/ci.yml` — point to the 4-job structure and the 5-image Docker matrix.
 
 ---
 
@@ -119,7 +125,7 @@
 ## HANDOFF B — Member 2 → Member 3
 
 > **Member 2 says:**
-> *"The 4 mart tables are now materialised in BigQuery under the `price_intelligence_marts` dataset. `mart_price_stats` has one row per source. `mart_price_history` has one row per product per day. `mart_price_alerts` has every product that dropped ≥5%. These are the tables that the API and the dashboard will query directly. Before [Member 4] can serve them, [Member 3] has to make sure the services are running — containerised, deployed, and monitored."*
+> *"The 4 mart tables are now materialised in BigQuery under the `price_intelligence_marts` dataset. `mart_price_stats` has one row per source. `mart_price_history` has one row per product per day. `mart_price_alerts` has every product that dropped ≥5%. These are the tables that the API and the dashboard will query directly. The Docker images and CI/CD pipeline that deliver those services are already built — [Member 3] now takes those images and deploys them to Kubernetes, and sets up the monitoring layer so we can observe them in production."*
 
 **What is being handed over:**
 - BigQuery dataset `price_intelligence_marts` with 4 tables
@@ -128,18 +134,13 @@
 
 ---
 
-## Member 3 — DevOps & Cloud Infrastructure
+## Member 3 — Cloud Infrastructure & Monitoring
 **Name:** [Team Member 3]
-**Elevator pitch:** *"I own the infrastructure layer — every service in this project runs inside a container I defined, on cloud infrastructure I provisioned with code, with a CI/CD pipeline that rebuilds and redeploys everything on every git push."*
+**Elevator pitch:** *"I own the production runtime layer — the Kubernetes manifests that deploy every service to the cloud, and the Prometheus/Grafana stack that monitors them once they are running."*
 
 ### Talking Points
 
-**1. Docker Compose — local development environment**
-- I defined the entire local environment in `docker-compose.yml` using **Docker Compose profiles** so teams can start only what they need: `--profile bigtable`, `--profile kafka`, `--profile nifi`, `--profile airflow`, `--profile monitoring`, `--profile dashboard`, `--profile fullstack`.
-- Each service has its own Dockerfile in `docker/`: `api.Dockerfile`, `sink.Dockerfile`, `dashboard.Dockerfile`, `airflow.Dockerfile`, `frontend.Dockerfile`. The Airflow image is notable — it bakes in the scrapers code (`COPY scrapers/`, `COPY scrapy.cfg`, `COPY bigtable/`, `COPY dbt_project/`) so it works without volume mounts in production.
-- I fixed a cross-profile dependency bug: the `sink` service (profile: `nifi`) depends on `bigtable-emulator` (profile: `bigtable`). Simply adding `nifi` to bigtable-emulator's profiles list ensures the emulator starts automatically when you launch the NiFi stack.
-
-**2. Kubernetes — production container orchestration**
+**1. Kubernetes — production container orchestration**
 - I wrote the full `k8s/` manifest set deployable with a single command: `kubectl apply -k k8s/`.
 - `namespace.yaml` isolates all resources in the `price-intelligence` namespace.
 - `configmap.yaml` externalises all env vars (GCP project ID, Kafka broker, dataset names) so no credentials live in code. A `Secret` object holds the GCP service account key.
@@ -147,22 +148,14 @@
 - `scraper-cronjob.yaml` runs all spiders as a Kubernetes `CronJob` at `0 2 * * *`, mirroring the Airflow schedule for cloud-native deployments.
 - `ingress.yaml` routes `/api` to FastAPI and `/` to the Streamlit dashboard through a single Nginx ingress controller.
 
-**3. Terraform — GCP infrastructure as code**
-- `infra/terraform/main.tf` provisions the entire GCP stack from zero: enables 8 GCP APIs, creates the Bigtable instance and `prices` table with all 3 column families, creates the GCS staging bucket with a 90-day lifecycle rule, creates 3 BigQuery datasets (`_raw`, `_staging`, `_marts`), defines the `raw.prices` table with full schema and day-partitioning, provisions Artifact Registry for Docker images, and creates a service account with exactly the IAM roles needed — no more.
-- Everything is reproducible: `terraform destroy` + `terraform apply` rebuilds the entire cloud environment in under 5 minutes.
-
-**4. GitHub Actions CI/CD and security scanning**
-- `.github/workflows/ci.yml` runs on every push: Python lint (`ruff`) + format check (`black`) + `pytest` with coverage → `dbt compile` syntax check → React TypeScript check + build → 5 Docker images built in a matrix job with layer caching → spider validation with a cached 2-page crawl.
-- `.github/workflows/cd.yml` runs on push to `main`: builds and pushes all 5 images to GitHub Container Registry tagged with the git SHA, then deploys the API, frontend, and dashboard to **Cloud Run** using `gcloud run deploy`.
-- `.github/workflows/security.yml` runs weekly: `pip-audit` for Python CVEs, `npm audit` for Node CVEs, **Trivy** container scans (results appear in GitHub's Security → Code scanning tab as SARIF), and **gitleaks** scans the full git history for accidentally committed secrets.
-- **Prometheus + Grafana** monitor the running services: request rate, latency (p50/p95), error rate, Airflow DAG metrics, and Bigtable ingest rate — all in a pre-built Grafana dashboard that auto-provisions on startup.
+**2. Prometheus & Grafana — observability**
+- Prometheus scrapes metrics from all running services. Grafana visualises request rate, latency (p50/p95), error rate, Airflow DAG success rate, and Bigtable ingest throughput.
+- Both services auto-provision on `docker compose --profile monitoring up` — Grafana loads its datasource and dashboard JSON from `monitoring/` at startup, so there is no manual configuration.
 
 ### Demo Actions
-1. Run `docker compose ps` — show all running containers and their health status.
+1. Run `make k8s-status` — show pods, services, and ingress in the `price-intelligence` namespace.
 2. Open `http://localhost:3000` (Grafana) — show the pre-built dashboard with live metrics.
 3. Open `http://localhost:9090` (Prometheus) — run a quick query like `http_requests_total`.
-4. Show `.github/workflows/ci.yml` — point to the 4-job structure and the 5-image Docker matrix.
-5. Run `make k8s-status` — show pods, services, and ingress in the namespace.
 
 ---
 
@@ -246,9 +239,9 @@
 | Segment | Duration | Who |
 |---|---|---|
 | Introduction — what the project does, architecture overview | 2 min | Any member (or rotate) |
-| Member 1 — Data Engineering & DataOps | 5 min | Hassan RADAH |
+| Member 1 — Data Engineering, DataOps & CI/CD | 6 min | Hassan RADAH |
 | Member 2 — Data Analytics & Transformation | 5 min | Khaoula BELAJAL |
-| Member 3 — DevOps & Cloud Infrastructure | 5 min | [Team Member 3] |
+| Member 3 — Cloud Infrastructure & Monitoring | 4 min | [Team Member 3] |
 | Member 4 — Full Stack Development | 5 min | Mohamed KANTOS |
 | Q&A | 3 min | All |
 

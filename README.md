@@ -9,9 +9,9 @@
 
 | # | Name | Role | Owns |
 |---|---|---|---|
-| 1 | **Hassan RADAH** | Data Engineering & DataOps | Scrapy, Kafka, NiFi, Airflow, Bigtable, data quality |
+| 1 | **Hassan RADAH** | Data Engineering, DataOps & CI/CD | Scrapy, Kafka, NiFi, Airflow, Bigtable, Docker, Terraform, GitHub Actions |
 | 2 | **Khaoula BELAJAL** | Data Analytics & Transformation | dbt models, Jupyter notebooks, statistical analysis |
-| 3 | **[Team Member 3]** | DevOps & Cloud Infrastructure | Docker, Kubernetes, Terraform, GitHub Actions, Prometheus/Grafana |
+| 3 | **[Team Member 3]** | Cloud Infrastructure & Monitoring | Kubernetes, Prometheus/Grafana |
 | 4 | **Mohamed KANTOS** | Full Stack Development | FastAPI, Streamlit dashboard, React frontend, Plotly |
 
 > For a full breakdown of responsibilities, demo scripts, and handoff points see [`docs/PRESENTATION_GUIDE.md`](docs/PRESENTATION_GUIDE.md).
@@ -112,8 +112,10 @@ This platform continuously scrapes product prices from 6 e-commerce websites, pr
 | Data Quality | Custom GE-style validation (18 checks) | — | Member 1 — Hassan RADAH |
 | SQL Transforms | dbt-bigquery | 1.7 | Member 2 |
 | Analytics | Python · SciPy · statsmodels · Pandas · NumPy | — | Member 2 |
-| Infrastructure | Docker Compose · Terraform · Kubernetes | — | Member 3 |
-| CI/CD | GitHub Actions | — | Member 3 |
+| Containerisation | Docker Compose · Dockerfiles (5 images) | — | Member 1 — Hassan RADAH |
+| Infrastructure as Code | Terraform (GCP) | — | Member 1 — Hassan RADAH |
+| CI/CD | GitHub Actions (ci / cd / security) | — | Member 1 — Hassan RADAH |
+| Container Orchestration | Kubernetes · kustomize | — | Member 3 |
 | Monitoring | Prometheus 2.51 · Grafana 10.4 | — | Member 3 |
 | API | FastAPI | 0.111 | Member 4 |
 | Dashboard | Streamlit · Plotly | — | Member 4 |
@@ -413,7 +415,7 @@ python analytics/validate_data.py --fail-on-error --json-report
 
 | Phase | Description | Status | Owner |
 |---|---|---|---|
-| **0** | Bootstrap — repo structure, Docker Compose skeleton, Makefiles | ✅ Done | Member 3 |
+| **0** | Bootstrap — repo structure, Docker Compose skeleton, Makefiles | ✅ Done | Member 1 |
 | **1** | Scrapy spiders — 6 sites, ValidationPipeline, JsonOutputPipeline | ✅ Done | Member 1 |
 | **2** | Bigtable emulator + schema + BigtableClient + BigtablePipeline | ✅ Done | Member 1 |
 | **3** | NiFi streaming flow + HTTP sink microservice + KafkaPipeline | ✅ Done | Member 1 |
@@ -421,8 +423,8 @@ python analytics/validate_data.py --fail-on-error --json-report
 | **5** | dbt models + tests + macros (staging → intermediate → 4 marts) | ✅ Done | Member 2 |
 | **6** | Statistical notebooks (descriptive + inferential, SciPy/statsmodels) | ✅ Done | Member 2 |
 | **7** | Streamlit dashboard (4 pages) + FastAPI + React frontend | ✅ Done | Member 4 |
-| **8** | CI/CD (GitHub Actions) + DataOps + data quality validation | ✅ Done | Members 1 & 3 |
-| **9** | Terraform GCP provisioning + Kubernetes manifests | ✅ Done | Member 3 |
+| **8** | CI/CD (GitHub Actions) + Docker images + Terraform + DataOps | ✅ Done | Member 1 |
+| **9** | Kubernetes manifests + Prometheus/Grafana monitoring | ✅ Done | Member 3 |
 | **10** | 67K demo dataset + Kafka producer/consumer + final documentation | ✅ Done | All members |
 
 ---
@@ -481,7 +483,7 @@ make clean-all       # Full reset (removes venv + Docker volumes)
 
 ## CI/CD
 
-GitHub Actions runs on every push to `main` (owned by **Member 3**):
+GitHub Actions runs on every push to `main` (owned by **Hassan RADAH**):
 
 | Job | What it does |
 |---|---|
@@ -504,7 +506,7 @@ Workflow files: `.github/workflows/`
 |---|---|---|
 | Data Engineering & DataOps | **Hassan RADAH** | [RADAHassan](https://github.com/RADAHassan) |
 | Data Analytics & Transformation | **Khaoula BELAJAL** | — |
-| DevOps & Cloud Infrastructure | **[Team Member 3]** | — |
+| Cloud Infrastructure & Monitoring | **[Team Member 3]** | — |
 | Full Stack Development | **Mohamed KANTOS** | — |
 
 Final Year Academic Project · 2025-2026
