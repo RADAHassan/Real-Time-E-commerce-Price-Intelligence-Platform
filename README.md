@@ -1,13 +1,26 @@
 # Real-Time E-commerce Price Intelligence Platform
 
 > End-to-end hybrid batch + streaming data engineering platform for e-commerce price monitoring.
-> Final-year academic project — Hassan RADA · 2025-2026
+> Final-year academic project — Group 4 · 2025-2026
+
+---
+
+## Team
+
+| # | Name | Role | Owns |
+|---|---|---|---|
+| 1 | **Hassan RADA** | Data Engineering & DataOps | Scrapy, Kafka, NiFi, Airflow, Bigtable, data quality |
+| 2 | **[Team Member 2]** | Data Analytics & Transformation | dbt models, Jupyter notebooks, statistical analysis |
+| 3 | **[Team Member 3]** | DevOps & Cloud Infrastructure | Docker, Kubernetes, Terraform, GitHub Actions, Prometheus/Grafana |
+| 4 | **[Team Member 4]** | Full Stack Development | FastAPI, Streamlit dashboard, React frontend, Plotly |
+
+> For a full breakdown of responsibilities, demo scripts, and handoff points see [`docs/PRESENTATION_GUIDE.md`](docs/PRESENTATION_GUIDE.md).
 
 ---
 
 ## What This Project Does
 
-This platform continuously scrapes product prices from 5 e-commerce websites, processes them through a multi-layer data pipeline, stores them in a time-series database, transforms them with dbt, runs statistical analysis, and displays everything in a live interactive dashboard.
+This platform continuously scrapes product prices from 6 e-commerce websites, processes them through a multi-layer data pipeline, stores them in a time-series database, transforms them with dbt, runs statistical analysis, and displays everything in a live interactive dashboard — built by a 4-person team with each layer owned end-to-end by one specialist.
 
 **Live demo:** `python3 -m streamlit run dashboard/app.py` → http://localhost:8501
 
@@ -89,22 +102,22 @@ This platform continuously scrapes product prices from 5 e-commerce websites, pr
 
 ## Tech Stack
 
-| Layer | Technology | Version |
-|---|---|---|
-| Scraping | Scrapy + BeautifulSoup | 2.x |
-| Streaming | Apache Kafka | 7.6 (Confluent) |
-| HTTP Routing | Apache NiFi | 1.25 |
-| Orchestration | Apache Airflow | 2.9 |
-| Storage | Google Cloud Bigtable (emulator) | SDK 2.x |
-| SQL transforms | dbt-bigquery | 1.7 |
-| Analytics | Python · SciPy · statsmodels · Pandas · NumPy | — |
-| Dashboard | Streamlit · Plotly | — |
-| API | FastAPI | 0.111 |
-| Frontend | React + Nginx | 18 |
-| Infrastructure | Docker Compose · Terraform · Kubernetes | — |
-| CI/CD | GitHub Actions | — |
-| Data Quality | Custom GE-style validation (18 checks) | — |
-| Monitoring | Prometheus 2.51 · Grafana 10.4 | — |
+| Layer | Technology | Version | Owner |
+|---|---|---|---|
+| Scraping | Scrapy + BeautifulSoup | 2.x | Member 1 — Hassan RADA |
+| Streaming | Apache Kafka | 7.6 (Confluent) | Member 1 — Hassan RADA |
+| HTTP Routing | Apache NiFi | 1.25 | Member 1 — Hassan RADA |
+| Orchestration | Apache Airflow | 2.9 | Member 1 — Hassan RADA |
+| Storage | Google Cloud Bigtable (emulator) | SDK 2.x | Member 1 — Hassan RADA |
+| Data Quality | Custom GE-style validation (18 checks) | — | Member 1 — Hassan RADA |
+| SQL Transforms | dbt-bigquery | 1.7 | Member 2 |
+| Analytics | Python · SciPy · statsmodels · Pandas · NumPy | — | Member 2 |
+| Infrastructure | Docker Compose · Terraform · Kubernetes | — | Member 3 |
+| CI/CD | GitHub Actions | — | Member 3 |
+| Monitoring | Prometheus 2.51 · Grafana 10.4 | — | Member 3 |
+| API | FastAPI | 0.111 | Member 4 |
+| Dashboard | Streamlit · Plotly | — | Member 4 |
+| Frontend | React + Nginx | 18 | Member 4 |
 
 ---
 
@@ -398,19 +411,19 @@ python analytics/validate_data.py --fail-on-error --json-report
 
 ## Development Phases
 
-| Phase | Description | Status |
-|---|---|---|
-| **0** | Bootstrap — repo structure, Docker Compose skeleton, Makefiles | ✅ Done |
-| **1** | Scrapy spiders — 5 sites, ValidationPipeline, JsonOutputPipeline | ✅ Done |
-| **2** | Bigtable emulator + schema + BigtableClient + BigtablePipeline | ✅ Done |
-| **3** | NiFi streaming flow + HTTP sink microservice + KafkaPipeline | ✅ Done |
-| **4** | Airflow DAGs (daily scrape + dbt + weekly report) | ✅ Done |
-| **5** | dbt models + tests + macros (staging → intermediate → 4 marts) | ✅ Done |
-| **6** | Statistical notebooks (descriptive + inferential, SciPy/statsmodels) | ✅ Done |
-| **7** | Streamlit dashboard (4 pages) + FastAPI + React frontend | ✅ Done |
-| **8** | CI/CD (GitHub Actions) + DataOps + data quality validation | ✅ Done |
-| **9** | Terraform GCP provisioning (Bigtable, BigQuery, Cloud Run) | ✅ Done |
-| **10** | 67K demo dataset + Kafka producer/consumer + final README | ✅ Done |
+| Phase | Description | Status | Owner |
+|---|---|---|---|
+| **0** | Bootstrap — repo structure, Docker Compose skeleton, Makefiles | ✅ Done | Member 3 |
+| **1** | Scrapy spiders — 6 sites, ValidationPipeline, JsonOutputPipeline | ✅ Done | Member 1 |
+| **2** | Bigtable emulator + schema + BigtableClient + BigtablePipeline | ✅ Done | Member 1 |
+| **3** | NiFi streaming flow + HTTP sink microservice + KafkaPipeline | ✅ Done | Member 1 |
+| **4** | Airflow DAGs (daily scrape + dbt + weekly report) | ✅ Done | Member 1 |
+| **5** | dbt models + tests + macros (staging → intermediate → 4 marts) | ✅ Done | Member 2 |
+| **6** | Statistical notebooks (descriptive + inferential, SciPy/statsmodels) | ✅ Done | Member 2 |
+| **7** | Streamlit dashboard (4 pages) + FastAPI + React frontend | ✅ Done | Member 4 |
+| **8** | CI/CD (GitHub Actions) + DataOps + data quality validation | ✅ Done | Members 1 & 3 |
+| **9** | Terraform GCP provisioning + Kubernetes manifests | ✅ Done | Member 3 |
+| **10** | 67K demo dataset + Kafka producer/consumer + final documentation | ✅ Done | All members |
 
 ---
 
@@ -468,21 +481,33 @@ make clean-all       # Full reset (removes venv + Docker volumes)
 
 ## CI/CD
 
-GitHub Actions runs on every push to `main`:
+GitHub Actions runs on every push to `main` (owned by **Member 3**):
 
-1. **Lint** — `ruff check` + `black --check`
-2. **Test** — `pytest tests/` with coverage
-3. **Docker build check** — builds all 5 Dockerfiles to catch errors early
+| Job | What it does |
+|---|---|
+| `python` | `ruff` lint → `black` format check → `pytest` with coverage → `dbt compile` |
+| `frontend` | `npm ci` → TypeScript check → production build → upload artifact |
+| `docker` | Builds all 5 images (api, sink, frontend, dashboard, airflow) with layer cache |
+| `scrapers` | `scrapy list` + 2-page cached crawl to validate spider output |
 
-Workflow file: `.github/workflows/ci.yml`
+**Security** (`.github/workflows/security.yml`): pip-audit, npm audit, Trivy container scan (results in GitHub Security tab), gitleaks secret detection — runs weekly and on every push to `main`.
+
+**Dependabot** (`.github/dependabot.yml`): automated weekly PRs for Python, Node, and GitHub Actions dependencies.
+
+Workflow files: `.github/workflows/`
 
 ---
 
-## Author
+## Team
 
-**Hassan RADA** · Final Year Data Engineering Project · 2025-2026
+| Role | Name | GitHub |
+|---|---|---|
+| Data Engineering & DataOps | **Hassan RADA** | [RADAHassan](https://github.com/RADAHassan) |
+| Data Analytics & Transformation | **[Team Member 2]** | — |
+| DevOps & Cloud Infrastructure | **[Team Member 3]** | — |
+| Full Stack Development | **[Team Member 4]** | — |
 
-GitHub: [RADAHassan](https://github.com/RADAHassan)
+Final Year Academic Project · 2025-2026
 
 ---
 
