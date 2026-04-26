@@ -1,0 +1,42 @@
+version: 2
+
+updates:
+  # Python dependencies
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    groups:
+      scrapy-stack:
+        patterns: ["scrapy*", "twisted*", "w3lib*"]
+      gcp-stack:
+        patterns: ["google-cloud*", "google-auth*", "grpcio*"]
+      data-stack:
+        patterns: ["pandas*", "numpy*", "scipy*", "plotly*"]
+
+  # Node / npm (React frontend)
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "javascript"]
+    groups:
+      react-stack:
+        patterns: ["react*", "@types/react*", "vite*"]
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]
