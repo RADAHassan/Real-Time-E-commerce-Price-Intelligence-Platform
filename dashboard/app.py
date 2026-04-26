@@ -55,7 +55,9 @@ CHART_BASE = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
     font=dict(family="Inter", color="#94a3b8"),
-    title_font=dict(color="#e2e8f0", size=13, family="Inter"),
+    # title_font alone creates layout.title={font:...} with no .text, which
+    # Plotly.js serialises as the string "undefined".  Explicit text="" stops that.
+    title=dict(text="", font=dict(color="#e2e8f0", size=13, family="Inter")),
     legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#94a3b8", size=11)),
     margin=dict(l=16, r=16, t=40, b=16),
     xaxis=dict(gridcolor="#1a2640", zerolinecolor="#1a2640",
@@ -861,18 +863,23 @@ def page_live():
     with st.expander("🎛️  Filters & Sort", expanded=st.session_state.show_filters):
         st.markdown('<div class="filter-panel">', unsafe_allow_html=True)
 
-        # Row 1: Search + price range
-        fa, fb = st.columns([2, 2])
-        with fa:
-            search = st.text_input("", placeholder="🔍  Search title or category…",
-                                   value=st.session_state.search,
-                                   key="search_input", label_visibility="collapsed")
-            st.session_state.search = search
-        with fb:
-            p_range = st.slider("Price range", min_value=price_floor,
-                                max_value=max(price_ceil, price_floor + 1),
-                                value=(price_floor, price_ceil),
-                                format="%.0f", label_visibility="collapsed")
+        # Row 1: Search bar — full width so it doesn't feel cramped
+        search = st.text_input("", placeholder="🔍  Search title or category…",
+                               value=st.session_state.search,
+                               key="search_input", label_visibility="collapsed")
+        st.session_state.search = search
+
+        # Row 2: Price range on its own row with an inline label
+        st.markdown(
+            '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;'
+            'text-transform:uppercase;color:#334155;margin-top:0.55rem;margin-bottom:1px">'
+            'Price range</div>',
+            unsafe_allow_html=True,
+        )
+        p_range = st.slider("Price range", min_value=price_floor,
+                            max_value=max(price_ceil, price_floor + 1),
+                            value=(price_floor, price_ceil),
+                            format="%.0f", label_visibility="collapsed")
 
         st.markdown("<div style='margin:0.6rem 0'></div>", unsafe_allow_html=True)
 
@@ -954,24 +961,37 @@ def page_live():
     ch1, ch2 = st.columns([3, 2])
     with ch1:
         sec("Price distribution", badge="violin · log scale", icon="📊")
-        fig = px.violin(filtered, x="source", y="price", color="source",
-                        color_discrete_map=SOURCE_COLORS, box=True, points="outliers",
-                        log_y=True, labels={"price":"Price (log)","source":""})
-        fig.update_traces(meanline_visible=True, line_width=1.5)
-        fig.update_layout(showlegend=False)
-        st.plotly_chart(chart(fig, 320), use_container_width=True)
+        # log_y=True causes Plotly.js to silently abort the entire trace when
+        # any price is 0 (log(0) = -∞).  Filter first; show fallback if empty.
+        violin_df = filtered[filtered["price"] > 0].copy()
+        if violin_df.empty:
+            st.info("No products with positive prices for the current filters.")
+        else:
+            fig = px.violin(violin_df, x="source", y="price", color="source",
+                            color_discrete_map=SOURCE_COLORS, box=True, points="outliers",
+                            log_y=True, labels={"price":"Price (log)","source":""})
+            fig.update_traces(meanline_visible=True, line_width=1.5)
+            fig.update_layout(showlegend=False)
+            st.plotly_chart(chart(fig, 320), use_container_width=True)
 
     with ch2:
         sec("Market share", badge="by source", icon="🍩")
         share = filtered.groupby("source").size().reset_index(name="n")
-        fig2 = px.pie(share, values="n", names="source",
-                      color="source", color_discrete_map=SOURCE_COLORS, hole=0.6)
-        fig2.update_traces(textposition="outside", textinfo="percent+label",
-                           textfont=dict(size=11, color="#94a3b8"),
-                           marker_line_color="#07101f", marker_line_width=2,
-                           pull=[0.04]*len(share))
-        fig2.update_layout(showlegend=False)
-        st.plotly_chart(chart(fig2, 320), use_container_width=True)
+        if share.empty:
+            st.info("No data for the current filters.")
+        else:
+            fig2 = px.pie(share, values="n", names="source",
+                          color="source", color_discrete_map=SOURCE_COLORS, hole=0.6)
+            # textposition="outside" + the 16px CHART_BASE margins push labels
+            # past the container edge → they get CSS-clipped and the chart looks
+            # blank.  "inside"+"percent" keeps everything within the donut ring;
+            # the legend (styled by CHART_BASE) identifies each source.
+            fig2.update_traces(textposition="inside", textinfo="percent",
+                               textfont=dict(size=11, color="#f1f5f9"),
+                               marker_line_color="#07101f", marker_line_width=2,
+                               pull=[0.02]*len(share))
+            fig2.update_layout(showlegend=True)
+            st.plotly_chart(chart(fig2, 320), use_container_width=True)
 
     # ── Progress bars (source breakdown) ─────────────────────────────────────
     src_counts = filtered.groupby("source").size().reset_index(name="count").sort_values("count", ascending=False)
@@ -1111,20 +1131,42 @@ def page_stats():
     # ── Descriptive ───────────────────────────────────────────────────────────
     with tab1:
         sec("Summary statistics", badge="per source", icon="📋")
-        desc = (df.groupby("source")["price"].agg(
-            n="count",
-            mean=lambda s: round(s.mean(),2),
-            median=lambda s: round(s.median(),2),
-            std=lambda s: round(s.std(),2),
-            min="min", max="max",
-            q25=lambda s: round(s.quantile(0.25),2),
-            q75=lambda s: round(s.quantile(0.75),2),
-            skew=lambda s: round(float(scipy_stats.skew(s.dropna())),3),
-            kurt=lambda s: round(float(scipy_stats.kurtosis(s.dropna())),3),
-        ).reset_index())
-        st.dataframe(desc, use_container_width=True, hide_index=True,
-                     column_config={c: st.column_config.NumberColumn(c, format="%.2f")
-                                    for c in desc.select_dtypes("number").columns})
+
+        # Mixing string builtins ("count","min","max") with scipy lambdas in a
+        # single .agg() call can silently raise TypeError in pandas 2.x, leaving
+        # the tab blank.  A per-group apply function is explicit and safe.
+        def _price_stats(s: pd.Series) -> pd.Series:
+            s = s.dropna()
+            n = len(s)
+            def _safe(fn, min_n, fallback=float("nan")):
+                try:
+                    return fn() if n >= min_n else fallback
+                except Exception:
+                    return fallback
+            return pd.Series({
+                "n":      n,
+                "mean":   _safe(lambda: round(s.mean(), 2),   1),
+                "median": _safe(lambda: round(s.median(), 2), 1),
+                "std":    _safe(lambda: round(s.std(), 2),    2, 0.0),
+                "min":    _safe(lambda: round(s.min(), 2),    1),
+                "max":    _safe(lambda: round(s.max(), 2),    1),
+                "q25":    _safe(lambda: round(s.quantile(0.25), 2), 1),
+                "q75":    _safe(lambda: round(s.quantile(0.75), 2), 1),
+                "skew":   _safe(lambda: round(float(scipy_stats.skew(s)), 3),       3),
+                "kurt":   _safe(lambda: round(float(scipy_stats.kurtosis(s)), 3),   4),
+            })
+
+        desc = df.groupby("source")["price"].apply(_price_stats).reset_index()
+        # pandas may insert a stray "level_1" column on some versions
+        desc = desc.drop(columns=[c for c in desc.columns if c == "level_1"])
+
+        if desc.empty:
+            st.info("No statistics available — run a scraper first.")
+        else:
+            st.dataframe(desc, use_container_width=True, hide_index=True,
+                         height=min(200 + len(desc) * 38, 420),
+                         column_config={c: st.column_config.NumberColumn(c, format="%.2f")
+                                        for c in desc.select_dtypes("number").columns})
 
         ca, cb = st.columns(2)
         with ca:
