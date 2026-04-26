@@ -180,6 +180,14 @@ scrape-all: scrape-books scrape-scrapeme scrape-jumia scrape-ultrapc scrape-micr
 scrape-books-sample: ## Crawl books.toscrape.com — 2 pages only (quick test)
 	$(VENV)/bin/scrapy crawl books_spider -s MAX_PAGES=2 -s HTTPCACHE_ENABLED=true
 
+.PHONY: scrape-cdiscount
+scrape-cdiscount: ## Crawl cdiscount.com — all 5 categories (EUR)
+	$(VENV)/bin/scrapy crawl cdiscount_spider
+
+.PHONY: scrape-cdiscount-sample
+scrape-cdiscount-sample: ## Crawl cdiscount.com — 2 pages per category (quick test)
+	$(VENV)/bin/scrapy crawl cdiscount_spider -a max_pages=2 -s HTTPCACHE_ENABLED=true
+
 # =============================================================================
 # NiFi + Sink (Phase 3)
 # =============================================================================
@@ -380,6 +388,14 @@ tf-destroy: ## Destroy all GCP resources managed by Terraform
 dashboard: ## Start Streamlit dashboard locally
 	$(VENV)/bin/streamlit run dashboard/app.py --server.port=8501
 
+.PHONY: dashboard-docker
+dashboard-docker: ## Build and run dashboard in Docker
+	docker build -f docker/dashboard.Dockerfile -t price-intelligence-dashboard:local .
+	docker run --rm -p 8501:8501 \
+		-v $(PWD)/data:/app/data \
+		-e BIGTABLE_EMULATOR_HOST=host.docker.internal:8086 \
+		price-intelligence-dashboard:local
+
 # =============================================================================
 # Utilities
 # =============================================================================
@@ -411,6 +427,52 @@ demo: ## Run the full end-to-end demo (Phase 10)
 	@sleep 5
 	@$(MAKE) scrape-books
 	@echo "✓ Demo complete — open http://localhost:8501"
+
+# =============================================================================
+# Kubernetes (Phase 8)
+# =============================================================================
+.PHONY: k8s-apply
+k8s-apply: ## Deploy all k8s manifests to the current kubectl context
+	kubectl apply -k k8s/
+	@echo "✓ Manifests applied — check: kubectl get pods -n price-intelligence"
+
+.PHONY: k8s-delete
+k8s-delete: ## Delete all k8s resources in the price-intelligence namespace
+	kubectl delete -k k8s/
+
+.PHONY: k8s-status
+k8s-status: ## Show pods, services, and ingress in the namespace
+	kubectl get pods,svc,ingress -n price-intelligence
+
+.PHONY: k8s-logs-api
+k8s-logs-api: ## Tail API pod logs
+	kubectl logs -n price-intelligence -l component=api -f
+
+.PHONY: k8s-logs-dashboard
+k8s-logs-dashboard: ## Tail dashboard pod logs
+	kubectl logs -n price-intelligence -l component=dashboard -f
+
+# =============================================================================
+# Docker — build all images locally
+# =============================================================================
+.PHONY: docker-build-all
+docker-build-all: ## Build every Docker image locally (for smoke-testing)
+	docker build -f docker/api.Dockerfile       -t price-intelligence-api:local .
+	docker build -f docker/dashboard.Dockerfile -t price-intelligence-dashboard:local .
+	docker build -f docker/sink.Dockerfile      -t price-intelligence-sink:local .
+	docker build -f docker/frontend.Dockerfile  -t price-intelligence-frontend:local .
+	docker build -f docker/airflow.Dockerfile   -t price-intelligence-airflow:local .
+	@echo "✓ All images built"
+
+# =============================================================================
+# Security
+# =============================================================================
+.PHONY: security-scan
+security-scan: ## Run pip-audit + gitleaks locally (requires both installed)
+	@echo "→ Python dependency audit…"
+	pip-audit -r requirements.txt || true
+	@echo "→ Secret scan (gitleaks)…"
+	gitleaks detect --source . --verbose || true
 
 .PHONY: setup-git
 setup-git: ## Initialize git and add remote
