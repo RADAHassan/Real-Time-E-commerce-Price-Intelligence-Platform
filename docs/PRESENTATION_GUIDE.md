@@ -31,7 +31,7 @@
 ---
 
 ## Member 1 — Data Engineering & DataOps
-**Name:** Hassan RADA
+**Name:** Hassan RADAH
 **Elevator pitch:** *"I own everything that touches the data before it is clean — collecting it, validating it, routing it, and scheduling it to run every day automatically."*
 
 ### Talking Points
@@ -246,7 +246,7 @@
 | Segment | Duration | Who |
 |---|---|---|
 | Introduction — what the project does, architecture overview | 2 min | Any member (or rotate) |
-| Member 1 — Data Engineering & DataOps | 5 min | Hassan RADA |
+| Member 1 — Data Engineering & DataOps | 5 min | Hassan RADAH |
 | Member 2 — Data Analytics & Transformation | 5 min | [Team Member 2] |
 | Member 3 — DevOps & Cloud Infrastructure | 5 min | [Team Member 3] |
 | Member 4 — Full Stack Development | 5 min | [Team Member 4] |

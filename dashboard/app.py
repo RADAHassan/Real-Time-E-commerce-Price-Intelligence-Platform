@@ -836,7 +836,7 @@ with st.sidebar:
 
     st.markdown("""
     <div style="margin-top:1.5rem;font-size:0.62rem;color:#1e2d45;text-align:center;padding-bottom:1rem">
-      Hassan RADA · Final Year Project · 2026
+      Hassan RADAH · Final Year Project · 2026
     </div>
     """, unsafe_allow_html=True)
 

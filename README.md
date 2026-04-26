@@ -9,7 +9,7 @@
 
 | # | Name | Role | Owns |
 |---|---|---|---|
-| 1 | **Hassan RADA** | Data Engineering & DataOps | Scrapy, Kafka, NiFi, Airflow, Bigtable, data quality |
+| 1 | **Hassan RADAH** | Data Engineering & DataOps | Scrapy, Kafka, NiFi, Airflow, Bigtable, data quality |
 | 2 | **[Team Member 2]** | Data Analytics & Transformation | dbt models, Jupyter notebooks, statistical analysis |
 | 3 | **[Team Member 3]** | DevOps & Cloud Infrastructure | Docker, Kubernetes, Terraform, GitHub Actions, Prometheus/Grafana |
 | 4 | **[Team Member 4]** | Full Stack Development | FastAPI, Streamlit dashboard, React frontend, Plotly |
@@ -104,12 +104,12 @@ This platform continuously scrapes product prices from 6 e-commerce websites, pr
 
 | Layer | Technology | Version | Owner |
 |---|---|---|---|
-| Scraping | Scrapy + BeautifulSoup | 2.x | Member 1 — Hassan RADA |
-| Streaming | Apache Kafka | 7.6 (Confluent) | Member 1 — Hassan RADA |
-| HTTP Routing | Apache NiFi | 1.25 | Member 1 — Hassan RADA |
-| Orchestration | Apache Airflow | 2.9 | Member 1 — Hassan RADA |
-| Storage | Google Cloud Bigtable (emulator) | SDK 2.x | Member 1 — Hassan RADA |
-| Data Quality | Custom GE-style validation (18 checks) | — | Member 1 — Hassan RADA |
+| Scraping | Scrapy + BeautifulSoup | 2.x | Member 1 — Hassan RADAH |
+| Streaming | Apache Kafka | 7.6 (Confluent) | Member 1 — Hassan RADAH |
+| HTTP Routing | Apache NiFi | 1.25 | Member 1 — Hassan RADAH |
+| Orchestration | Apache Airflow | 2.9 | Member 1 — Hassan RADAH |
+| Storage | Google Cloud Bigtable (emulator) | SDK 2.x | Member 1 — Hassan RADAH |
+| Data Quality | Custom GE-style validation (18 checks) | — | Member 1 — Hassan RADAH |
 | SQL Transforms | dbt-bigquery | 1.7 | Member 2 |
 | Analytics | Python · SciPy · statsmodels · Pandas · NumPy | — | Member 2 |
 | Infrastructure | Docker Compose · Terraform · Kubernetes | — | Member 3 |
@@ -502,7 +502,7 @@ Workflow files: `.github/workflows/`
 
 | Role | Name | GitHub |
 |---|---|---|
-| Data Engineering & DataOps | **Hassan RADA** | [RADAHassan](https://github.com/RADAHassan) |
+| Data Engineering & DataOps | **Hassan RADAH** | [RADAHassan](https://github.com/RADAHassan) |
 | Data Analytics & Transformation | **[Team Member 2]** | — |
 | DevOps & Cloud Infrastructure | **[Team Member 3]** | — |
 | Full Stack Development | **[Team Member 4]** | — |
