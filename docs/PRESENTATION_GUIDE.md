@@ -80,7 +80,7 @@
 ---
 
 ## Member 2 — Data Analytics & Transformation
-**Name:** [Team Member 2]
+**Name:** Khaoula BELAJAL
 **Elevator pitch:** *"I own what happens to the data after it lands in BigQuery — cleaning it, modelling it into analytics-ready tables, and running the statistical analysis that turns raw prices into actionable intelligence."*
 
 ### Talking Points
@@ -180,7 +180,7 @@
 ---
 
 ## Member 4 — Full Stack Development
-**Name:** [Team Member 4]
+**Name:** Mohamed KANTOS
 **Elevator pitch:** *"I own the end-user experience — the REST API that exposes the clean data, the interactive Streamlit dashboard that analysts use daily, and the React frontend that external stakeholders access."*
 
 ### Talking Points
@@ -247,9 +247,9 @@
 |---|---|---|
 | Introduction — what the project does, architecture overview | 2 min | Any member (or rotate) |
 | Member 1 — Data Engineering & DataOps | 5 min | Hassan RADAH |
-| Member 2 — Data Analytics & Transformation | 5 min | [Team Member 2] |
+| Member 2 — Data Analytics & Transformation | 5 min | Khaoula BELAJAL |
 | Member 3 — DevOps & Cloud Infrastructure | 5 min | [Team Member 3] |
-| Member 4 — Full Stack Development | 5 min | [Team Member 4] |
+| Member 4 — Full Stack Development | 5 min | Mohamed KANTOS |
 | Q&A | 3 min | All |
 
 **Total: ~25 minutes**

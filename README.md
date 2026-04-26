@@ -10,9 +10,9 @@
 | # | Name | Role | Owns |
 |---|---|---|---|
 | 1 | **Hassan RADAH** | Data Engineering & DataOps | Scrapy, Kafka, NiFi, Airflow, Bigtable, data quality |
-| 2 | **[Team Member 2]** | Data Analytics & Transformation | dbt models, Jupyter notebooks, statistical analysis |
+| 2 | **Khaoula BELAJAL** | Data Analytics & Transformation | dbt models, Jupyter notebooks, statistical analysis |
 | 3 | **[Team Member 3]** | DevOps & Cloud Infrastructure | Docker, Kubernetes, Terraform, GitHub Actions, Prometheus/Grafana |
-| 4 | **[Team Member 4]** | Full Stack Development | FastAPI, Streamlit dashboard, React frontend, Plotly |
+| 4 | **Mohamed KANTOS** | Full Stack Development | FastAPI, Streamlit dashboard, React frontend, Plotly |
 
 > For a full breakdown of responsibilities, demo scripts, and handoff points see [`docs/PRESENTATION_GUIDE.md`](docs/PRESENTATION_GUIDE.md).
 
@@ -503,9 +503,9 @@ Workflow files: `.github/workflows/`
 | Role | Name | GitHub |
 |---|---|---|
 | Data Engineering & DataOps | **Hassan RADAH** | [RADAHassan](https://github.com/RADAHassan) |
-| Data Analytics & Transformation | **[Team Member 2]** | — |
+| Data Analytics & Transformation | **Khaoula BELAJAL** | — |
 | DevOps & Cloud Infrastructure | **[Team Member 3]** | — |
-| Full Stack Development | **[Team Member 4]** | — |
+| Full Stack Development | **Mohamed KANTOS** | — |
 
 Final Year Academic Project · 2025-2026
 
