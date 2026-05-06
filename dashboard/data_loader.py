@@ -1,6 +1,11 @@
 """
 Shared data-loading logic for the Streamlit dashboard.
-Priority chain: ClickHouse → Bigtable emulator → BigQuery mart tables → local JSONL files.
+
+Raw data priority:  ClickHouse → Bigtable emulator → local JSONL files
+Mart data priority: ClickHouse views → BigQuery mart tables → JSONL aggregation
+
+ClickHouse acts as the local data warehouse: the prices table is the raw layer,
+the 4 mart_* views are the analytical layer (auto-updated at query time).
 """
 from __future__ import annotations
 
@@ -136,16 +141,31 @@ def _clean(df: pd.DataFrame) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def load_mart(table: str) -> pd.DataFrame:
-    """Load a dbt mart table from BigQuery or fall back to aggregating JSONL."""
+    """Load a mart table. Priority: ClickHouse view → BigQuery → JSONL aggregation."""
+    df = _load_mart_clickhouse(table)
+    if not df.empty:
+        return df
     try:
         from google.cloud import bigquery
-        project  = os.environ["GCP_PROJECT_ID"]
-        dataset  = os.environ.get("BIGQUERY_DATASET", "price_intelligence") + "_marts"
-        bq       = bigquery.Client(project=project)
-        sql      = f"SELECT * FROM `{project}.{dataset}.{table}`"
+        project = os.environ["GCP_PROJECT_ID"]
+        dataset = os.environ.get("BIGQUERY_DATASET", "price_intelligence") + "_marts"
+        bq      = bigquery.Client(project=project)
+        sql     = f"SELECT * FROM `{project}.{dataset}.{table}`"
         return bq.query(sql).to_dataframe()
     except Exception:
         return _build_mart_from_jsonl(table)
+
+
+def _load_mart_clickhouse(table: str) -> pd.DataFrame:
+    """Query a ClickHouse mart view by the same name used in BigQuery/dbt."""
+    try:
+        from clickhouse.client import ClickHouseClient
+        client = ClickHouseClient()
+        if not client.ping():
+            return pd.DataFrame()
+        return client.query_df(f"SELECT * FROM {table}")
+    except Exception:
+        return pd.DataFrame()
 
 
 def _build_mart_from_jsonl(table: str) -> pd.DataFrame:
