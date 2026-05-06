@@ -50,17 +50,29 @@ DOWNLOADER_MIDDLEWARES = {
 # Item pipelines (order matters: lower number runs first)
 # ---------------------------------------------------------------------------
 ITEM_PIPELINES = {
-    "scrapers.pipelines.ValidationPipeline": 100,
-    "scrapers.pipelines.JsonOutputPipeline": 200,
-    "scrapers.pipelines.BigtablePipeline":   250,  # activated via BIGTABLE_PUSH_ENABLED
-    "scrapers.pipelines.KafkaPipeline":      275,  # activated via KAFKA_PUSH_ENABLED
-    "scrapers.pipelines.NiFiHttpPipeline":   300,
+    "scrapers.pipelines.ValidationPipeline":  100,
+    "scrapers.pipelines.JsonOutputPipeline":  200,
+    "scrapers.pipelines.BigtablePipeline":    250,  # activated via BIGTABLE_PUSH_ENABLED
+    "scrapers.pipelines.ClickHousePipeline":  260,  # activated via CLICKHOUSE_PUSH_ENABLED
+    "scrapers.pipelines.KafkaPipeline":       275,  # activated via KAFKA_PUSH_ENABLED
+    "scrapers.pipelines.NiFiHttpPipeline":    300,
 }
 
 # Bigtable (Phase 2)
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
 BIGTABLE_INSTANCE_ID = os.getenv("BIGTABLE_INSTANCE_ID", "price-intelligence")
 BIGTABLE_PUSH_ENABLED = os.getenv("BIGTABLE_PUSH_ENABLED", "false").lower() == "true"
+
+# ---------------------------------------------------------------------------
+# ClickHouse analytical store — set CLICKHOUSE_PUSH_ENABLED=true to activate
+# Start container: docker compose --profile clickhouse up -d
+# ---------------------------------------------------------------------------
+CLICKHOUSE_HOST         = os.getenv("CLICKHOUSE_HOST", "localhost")
+CLICKHOUSE_PORT         = int(os.getenv("CLICKHOUSE_PORT", "8123"))
+CLICKHOUSE_DB           = os.getenv("CLICKHOUSE_DB", "price_intelligence")
+CLICKHOUSE_USER         = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD     = os.getenv("CLICKHOUSE_PASSWORD", "")
+CLICKHOUSE_PUSH_ENABLED = os.getenv("CLICKHOUSE_PUSH_ENABLED", "false").lower() == "true"
 
 # ---------------------------------------------------------------------------
 # Kafka streaming (Phase 3)  — set KAFKA_PUSH_ENABLED=true to activate

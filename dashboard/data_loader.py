@@ -1,6 +1,6 @@
 """
 Shared data-loading logic for the Streamlit dashboard.
-Priority chain: Bigtable emulator → BigQuery mart tables → local JSONL files.
+Priority chain: ClickHouse → Bigtable emulator → BigQuery mart tables → local JSONL files.
 """
 from __future__ import annotations
 
@@ -43,11 +43,37 @@ sys.path.insert(0, str(_ROOT))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Raw / live data  (from Bigtable)
+# Raw / live data  (ClickHouse → Bigtable → JSONL)
 # ──────────────────────────────────────────────────────────────────────────────
 
-def load_live(limit: int = 5000) -> pd.DataFrame:
-    """Return latest scraped rows from Bigtable or JSONL fallback."""
+def load_live(limit: int = 100_000) -> pd.DataFrame:
+    """Return latest scraped rows. Priority: ClickHouse → Bigtable → JSONL."""
+    df = _load_clickhouse(limit)
+    if not df.empty:
+        return df
+    df = _load_bigtable(limit)
+    if not df.empty:
+        return df
+    return _load_jsonl()
+
+
+def _load_clickhouse(limit: int = 100_000) -> pd.DataFrame:
+    try:
+        from clickhouse.client import ClickHouseClient
+        client = ClickHouseClient()
+        if not client.ping():
+            return pd.DataFrame()
+        df = client.query_df(
+            f"SELECT * FROM prices ORDER BY scraped_at DESC LIMIT {limit}"
+        )
+        if df.empty:
+            return pd.DataFrame()
+        return _clean(df)
+    except Exception:
+        return pd.DataFrame()
+
+
+def _load_bigtable(limit: int = 5000) -> pd.DataFrame:
     try:
         from bigtable.client import BigtableClient
         client = BigtableClient(
@@ -56,13 +82,13 @@ def load_live(limit: int = 5000) -> pd.DataFrame:
         )
         rows = list(client._table.read_rows(limit=limit))
         if not rows:
-            raise ValueError("Bigtable empty")
+            return pd.DataFrame()
         records = [client._row_to_dict(r) for r in rows]
         df = pd.DataFrame(records)
         df["source"] = "bigtable"
         return _clean(df)
     except Exception:
-        return _load_jsonl()
+        return pd.DataFrame()
 
 
 def _load_jsonl() -> pd.DataFrame:

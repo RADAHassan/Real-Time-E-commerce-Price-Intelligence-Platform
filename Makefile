@@ -113,18 +113,31 @@ up-monitoring: ## Start Prometheus + Grafana
 	docker compose --profile monitoring up -d
 	@echo "✓ Grafana at http://localhost:3000 | Prometheus at http://localhost:9090"
 
+.PHONY: up-clickhouse
+up-clickhouse: ## Start ClickHouse analytical store
+	docker compose --profile clickhouse up -d
+	@echo "✓ ClickHouse HTTP at http://localhost:8123 | Play UI at http://localhost:8123/play"
+
 .PHONY: up-all
 up-all: ## Start ALL services (heavy — needs 16GB+ RAM)
-	docker compose --profile bigtable --profile nifi --profile airflow --profile monitoring up -d
+	docker compose --profile bigtable --profile nifi --profile airflow --profile monitoring --profile clickhouse up -d
+
+.PHONY: clickhouse-shell
+clickhouse-shell: ## Open ClickHouse SQL shell
+	docker compose exec clickhouse clickhouse-client --database price_intelligence
+
+.PHONY: clickhouse-count
+clickhouse-count: ## Show row count in ClickHouse prices table
+	docker compose exec clickhouse clickhouse-client --query "SELECT source, count() AS rows FROM price_intelligence.prices GROUP BY source ORDER BY rows DESC"
 
 .PHONY: down
 down: ## Stop and remove all containers
-	docker compose --profile bigtable --profile nifi --profile airflow --profile kafka --profile monitoring --profile dashboard down
+	docker compose --profile bigtable --profile nifi --profile airflow --profile kafka --profile monitoring --profile dashboard --profile clickhouse down
 	@echo "✓ All containers stopped"
 
 .PHONY: down-v
 down-v: ## Stop containers AND delete volumes (destructive!)
-	docker compose --profile bigtable --profile nifi --profile airflow --profile kafka --profile monitoring --profile dashboard down -v
+	docker compose --profile bigtable --profile nifi --profile airflow --profile kafka --profile monitoring --profile dashboard --profile clickhouse down -v
 	@echo "✓ Containers and volumes removed"
 
 .PHONY: logs

@@ -1,12 +1,16 @@
 """
-Four-stage item pipeline:
+Item pipeline stages:
 
-  ValidationPipeline  (100) — drops items with missing/invalid fields
-  JsonOutputPipeline  (200) — appends each item as a JSON line to a .jsonl file
-  BigtablePipeline    (250) — writes item to Bigtable emulator / production
-                              (no-op until BIGTABLE_PUSH_ENABLED=true in .env)
-  NiFiHttpPipeline    (300) — POSTs the item to NiFi's ListenHTTP endpoint
-                              (no-op until NIFI_PUSH_ENABLED=true in .env)
+  ValidationPipeline   (100) — drops items with missing/invalid fields
+  JsonOutputPipeline   (200) — appends each item as a JSON line to a .jsonl file
+  BigtablePipeline     (250) — writes item to Bigtable emulator / production
+                               (no-op until BIGTABLE_PUSH_ENABLED=true in .env)
+  ClickHousePipeline   (260) — inserts into ClickHouse analytical store
+                               (no-op until CLICKHOUSE_PUSH_ENABLED=true in .env)
+  KafkaPipeline        (275) — publishes to Kafka price.raw topic
+                               (no-op until KAFKA_PUSH_ENABLED=true in .env)
+  NiFiHttpPipeline     (300) — POSTs the item to NiFi's ListenHTTP endpoint
+                               (no-op until NIFI_PUSH_ENABLED=true in .env)
 """
 
 import json
@@ -73,7 +77,64 @@ class JsonOutputPipeline:
 
 
 # ---------------------------------------------------------------------------
-# 3. Kafka push (activated by KAFKA_PUSH_ENABLED=true in .env)
+# 3. ClickHouse push (activated by CLICKHOUSE_PUSH_ENABLED=true in .env)
+# ---------------------------------------------------------------------------
+
+
+class ClickHousePipeline:
+    """Inserts validated items into ClickHouse in batches (stage 260).
+
+    Disabled by default — set CLICKHOUSE_PUSH_ENABLED=true in .env.
+    Start ClickHouse: docker compose --profile clickhouse up -d
+    """
+
+    BATCH_SIZE = 100
+
+    def __init__(self, host: str, port: int, database: str, push_enabled: bool):
+        self.push_enabled = push_enabled
+        self._client = None
+        self._buffer: list = []
+        if push_enabled:
+            try:
+                from clickhouse.client import ClickHouseClient
+                self._client = ClickHouseClient(host=host, port=port, database=database)
+                logger.info("[ClickHouse] Client ready → %s:%s/%s", host, port, database)
+            except Exception as exc:
+                logger.warning("[ClickHouse] Client init failed: %s", exc)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            host=crawler.settings.get("CLICKHOUSE_HOST", "localhost"),
+            port=crawler.settings.getint("CLICKHOUSE_PORT", 8123),
+            database=crawler.settings.get("CLICKHOUSE_DB", "price_intelligence"),
+            push_enabled=crawler.settings.getbool("CLICKHOUSE_PUSH_ENABLED", False),
+        )
+
+    def process_item(self, item, spider):
+        if not self.push_enabled or self._client is None:
+            return item
+        self._buffer.append(dict(item))
+        if len(self._buffer) >= self.BATCH_SIZE:
+            self._flush(spider)
+        return item
+
+    def _flush(self, spider):
+        if not self._buffer:
+            return
+        try:
+            n = self._client.insert_items(self._buffer)
+            logger.debug("[ClickHouse] inserted %d rows for %s", n, spider.name)
+        except Exception as exc:
+            logger.warning("[ClickHouse] insert failed for %s: %s", spider.name, exc)
+        self._buffer.clear()
+
+    def close_spider(self, spider):
+        self._flush(spider)
+
+
+# ---------------------------------------------------------------------------
+# 4. Kafka push (activated by KAFKA_PUSH_ENABLED=true in .env)
 # ---------------------------------------------------------------------------
 
 
