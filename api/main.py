@@ -1,7 +1,7 @@
 """
 Price Intelligence API — read-path service.
-Serves data from dbt mart tables (BigQuery) with a mock-data fallback
-for local development (USE_MOCK_DATA=true).
+Priority: BigQuery mart tables → local JSONL files (67 k products).
+USE_MOCK_DATA=true is no longer the default; the JSONL store is used instead.
 """
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def list_products(
     offset: int = Query(0, ge=0),
 ) -> ProductListResponse:
     if _using_mock():
-        from api import mock_data  # noqa: PLC0415
+        from api import jsonl_store as mock_data  # noqa: PLC0415
         rows = mock_data.get_current_prices()
     else:
         sql = f"""
@@ -134,7 +134,7 @@ def list_products(
 @app.get("/api/v1/products/{product_id}", response_model=ProductPrice, tags=["products"])
 def get_product(product_id: str) -> ProductPrice:
     if _using_mock():
-        from api import mock_data  # noqa: PLC0415
+        from api import jsonl_store as mock_data  # noqa: PLC0415
         rows = [r for r in mock_data.get_current_prices() if r["product_id"] == product_id]
     else:
         sql = f"""
@@ -159,7 +159,7 @@ def get_product_history(
     days: int = Query(30, ge=1, le=365),
 ) -> list[PriceHistoryPoint]:
     if _using_mock():
-        from api import mock_data  # noqa: PLC0415
+        from api import jsonl_store as mock_data  # noqa: PLC0415
         rows = mock_data.get_price_history(product_id, days)
         if not rows:
             raise HTTPException(status_code=404, detail=f"Product {product_id!r} not found")
@@ -187,13 +187,14 @@ def list_sources() -> list[str]:
         "jumia.ma",
         "ultrapc.ma",
         "micromagma.ma",
+        "cdiscount.com",
     ]
 
 
 @app.get("/api/v1/stats", response_model=list[SourceStats], tags=["stats"])
 def get_stats() -> list[SourceStats]:
     if _using_mock():
-        from api import mock_data  # noqa: PLC0415
+        from api import jsonl_store as mock_data  # noqa: PLC0415
         rows = mock_data.get_stats()
     else:
         sql = f"""
@@ -215,7 +216,7 @@ def get_alerts(
     min_drop_pct: float = Query(5.0, description="Minimum drop percentage to include"),
 ) -> list[PriceAlert]:
     if _using_mock():
-        from api import mock_data  # noqa: PLC0415
+        from api import jsonl_store as mock_data  # noqa: PLC0415
         rows = mock_data.get_alerts()
     else:
         sql = f"""
