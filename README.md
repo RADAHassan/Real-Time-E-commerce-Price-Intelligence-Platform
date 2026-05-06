@@ -109,6 +109,7 @@ This platform continuously scrapes product prices from 6 e-commerce websites, pr
 | HTTP Routing | Apache NiFi | 1.25 | Member 1 — Hassan RADAH |
 | Orchestration | Apache Airflow | 2.9 | Member 1 — Hassan RADAH |
 | Storage | Google Cloud Bigtable (emulator) | SDK 2.x | Member 1 — Hassan RADAH |
+| Analytical Store | ClickHouse | 24.3 | Member 1 — Hassan RADAH |
 | Data Quality | Custom GE-style validation (18 checks) | — | Member 1 — Hassan RADAH |
 | SQL Transforms | dbt-bigquery | 1.7 | Member 2 |
 | Analytics | Python · SciPy · statsmodels · Pandas · NumPy | — | Member 2 |
