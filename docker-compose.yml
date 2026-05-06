@@ -286,6 +286,10 @@ services:
     ports:
       - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"   # HTTP interface (queries, health)
       - "${CLICKHOUSE_TCP_PORT:-9000}:9000"    # native TCP (clickhouse-connect)
+    environment:
+      CLICKHOUSE_USER: "${CLICKHOUSE_USER:-default}"
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-price123}"
+      CLICKHOUSE_DB: price_intelligence
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro

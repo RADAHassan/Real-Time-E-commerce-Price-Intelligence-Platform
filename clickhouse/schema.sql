@@ -42,7 +42,7 @@ SELECT
     argMax(rating,       scraped_at) AS rating,
     argMax(availability, scraped_at) AS availability,
     argMax(category,     scraped_at) AS category,
-    max(scraped_at)                  AS scraped_at
+    max(scraped_at)                  AS last_seen
 FROM price_intelligence.prices
 GROUP BY product_id;
 
@@ -52,13 +52,16 @@ SELECT
     source,
     currency,
     count()                       AS product_count,
-    round(avg(price),        2)   AS avg_price,
-    min(price)                    AS min_price,
-    max(price)                    AS max_price,
-    round(median(price),     2)   AS median_price,
-    round(stddevPop(price),  2)   AS stddev_price
-FROM price_intelligence.prices
-WHERE price > 0
+    round(avg(raw_price),    2)   AS avg_price,
+    min(raw_price)                AS min_price,
+    max(raw_price)                AS max_price,
+    round(median(raw_price), 2)   AS median_price,
+    round(stddevPop(raw_price), 2) AS stddev_price
+FROM (
+    SELECT source, currency, price AS raw_price
+    FROM price_intelligence.prices
+    WHERE price > 0
+)
 GROUP BY source, currency;
 
 -- Daily price per product — one row per (product, day) (mirrors dbt mart_price_history)
@@ -69,9 +72,12 @@ SELECT
     argMax(source,   scraped_at) AS source,
     argMax(currency, scraped_at) AS currency,
     toDate(scraped_at)           AS scraped_date,
-    round(avg(price), 4)         AS price
-FROM price_intelligence.prices
-WHERE price > 0
+    round(avg(raw_price), 4)     AS price
+FROM (
+    SELECT *, price AS raw_price
+    FROM price_intelligence.prices
+    WHERE price > 0
+)
 GROUP BY product_id, scraped_date
 ORDER BY product_id, scraped_date;
 
@@ -84,9 +90,12 @@ WITH daily AS (
         argMax(source,   scraped_at) AS source,
         argMax(currency, scraped_at) AS currency,
         toDate(scraped_at)           AS scraped_date,
-        round(avg(price), 4)         AS price
-    FROM price_intelligence.prices
-    WHERE price > 0
+        round(avg(raw_price), 4)     AS price
+    FROM (
+        SELECT *, price AS raw_price
+        FROM price_intelligence.prices
+        WHERE price > 0
+    )
     GROUP BY product_id, scraped_date
 ),
 with_lag AS (
