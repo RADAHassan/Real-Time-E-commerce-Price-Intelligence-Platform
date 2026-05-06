@@ -71,7 +71,7 @@ CLICKHOUSE_HOST         = os.getenv("CLICKHOUSE_HOST", "localhost")
 CLICKHOUSE_PORT         = int(os.getenv("CLICKHOUSE_PORT", "8123"))
 CLICKHOUSE_DB           = os.getenv("CLICKHOUSE_DB", "price_intelligence")
 CLICKHOUSE_USER         = os.getenv("CLICKHOUSE_USER", "default")
-CLICKHOUSE_PASSWORD     = os.getenv("CLICKHOUSE_PASSWORD", "")
+CLICKHOUSE_PASSWORD     = os.getenv("CLICKHOUSE_PASSWORD", "price123")
 CLICKHOUSE_PUSH_ENABLED = os.getenv("CLICKHOUSE_PUSH_ENABLED", "false").lower() == "true"
 
 # ---------------------------------------------------------------------------

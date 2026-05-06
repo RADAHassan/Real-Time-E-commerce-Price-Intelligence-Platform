@@ -20,7 +20,7 @@ _HOST     = os.environ.get("CLICKHOUSE_HOST", "localhost")
 _PORT     = int(os.environ.get("CLICKHOUSE_PORT", "8123"))
 _DATABASE = os.environ.get("CLICKHOUSE_DB", "price_intelligence")
 _USER     = os.environ.get("CLICKHOUSE_USER", "default")
-_PASSWORD = os.environ.get("CLICKHOUSE_PASSWORD", "")
+_PASSWORD = os.environ.get("CLICKHOUSE_PASSWORD", "price123")
 _TABLE    = "prices"
 
 _COLUMNS = [
