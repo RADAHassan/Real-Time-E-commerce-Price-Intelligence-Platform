@@ -1,14 +1,16 @@
-import { Activity, BarChart3, Bell, TrendingDown, Zap } from 'lucide-react'
+import { Activity, Atom, BarChart3, Bell, TrendingDown, Zap } from 'lucide-react'
 import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import Alerts from './pages/Alerts'
 import LivePrices from './pages/LivePrices'
 import MarketStats from './pages/MarketStats'
 import PriceHistory from './pages/PriceHistory'
+import StatisticalAnalysis from './pages/StatisticalAnalysis'
 
 const NAV = [
-  { to: '/',       label: 'Live Prices',    icon: Activity,    end: true },
-  { to: '/stats',  label: 'Market Stats',   icon: BarChart3,   end: false },
-  { to: '/alerts', label: 'Price Alerts',   icon: TrendingDown, end: false },
+  { to: '/',        label: 'Live Prices',    icon: Activity,      end: true  },
+  { to: '/stats',   label: 'Market Stats',   icon: BarChart3,     end: false },
+  { to: '/analysis', label: 'Analysis',       icon: Atom,          end: false },
+  { to: '/alerts',  label: 'Price Alerts',   icon: TrendingDown,  end: false },
 ]
 
 function Logo() {
@@ -71,6 +73,7 @@ export default function App() {
             <Route path="/"                   element={<LivePrices />} />
             <Route path="/stats"              element={<MarketStats />} />
             <Route path="/alerts"             element={<Alerts />} />
+            <Route path="/analysis"            element={<StatisticalAnalysis />} />
             <Route path="/history/:productId" element={<PriceHistory />} />
           </Routes>
         </main>

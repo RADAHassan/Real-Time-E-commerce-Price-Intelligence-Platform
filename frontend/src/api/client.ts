@@ -1,4 +1,7 @@
-import type { PriceAlert, PriceHistoryPoint, ProductListResponse, ProductPrice, SourceStats } from '../types'
+import type {
+  DescriptiveStat, HypothesisTests, PriceAlert, PriceHistoryPoint,
+  ProductListResponse, ProductPrice, RegressionResult, SourceStats,
+} from '../types'
 
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -23,6 +26,13 @@ export const api = {
   },
   sources: () => get<string[]>('/api/v1/sources'),
   stats:   ()  => get<SourceStats[]>('/api/v1/stats'),
+  analysis: {
+    descriptive: () => get<DescriptiveStat[]>('/api/v1/analysis/descriptive'),
+    tests:       () => get<HypothesisTests>('/api/v1/analysis/tests'),
+    regression:  () => get<RegressionResult>('/api/v1/analysis/regression'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    histogram:   () => get<{ sources: string[]; bins: any[] }>('/api/v1/analysis/histogram'),
+  },
   alerts:  (source?: string, minDrop = 5) => {
     const qs = new URLSearchParams({ min_drop_pct: String(minDrop) })
     if (source) qs.set('source', source)

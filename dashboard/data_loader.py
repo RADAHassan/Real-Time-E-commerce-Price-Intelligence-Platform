@@ -16,14 +16,22 @@ from pathlib import Path
 
 import pandas as pd
 
-# Map URL-style source names → canonical underscore names
+# Normalize all source name variants → canonical dot-format names
 _SOURCE_MAP = {
-    "books.toscrape.com": "books_toscrape",
-    "scrapeme.live":      "scrapeme_live",
-    "jumia.ma":           "jumia_ma",
-    "ultrapc.ma":         "ultrapc_ma",
-    "micromagma.ma":      "micromagma_ma",
-    "cdiscount.com":      "cdiscount",
+    # dot-format (pass-through / idempotent)
+    "books.toscrape.com": "books.toscrape.com",
+    "scrapeme.live":      "scrapeme.live",
+    "jumia.ma":           "jumia.ma",
+    "ultrapc.ma":         "ultrapc.ma",
+    "micromagma.ma":      "micromagma.ma",
+    "cdiscount.com":      "cdiscount.com",
+    # underscore-format (from JSONL / ClickHouse / Scrapy spider names)
+    "books_toscrape":     "books.toscrape.com",
+    "scrapeme_live":      "scrapeme.live",
+    "jumia_ma":           "jumia.ma",
+    "ultrapc_ma":         "ultrapc.ma",
+    "micromagma_ma":      "micromagma.ma",
+    "cdiscount":          "cdiscount.com",
 }
 
 def _norm_source(s: str) -> str:

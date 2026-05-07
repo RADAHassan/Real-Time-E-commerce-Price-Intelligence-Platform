@@ -12,10 +12,34 @@ import {
 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { api } from '../api/client'
 import Badge from '../components/Badge'
 import { SkeletonRow } from '../components/Spinner'
-import type { ProductPrice } from '../types'
+import type { ProductPrice, SourceStats } from '../types'
+
+// ── Source colours & labels ───────────────────────────────────────────────────
+const SRC_COLOR: Record<string, string> = {
+  'books.toscrape.com': '#6366f1',
+  'scrapeme.live':      '#f59e0b',
+  'jumia.ma':           '#fb923c',
+  'ultrapc.ma':         '#22d3ee',
+  'micromagma.ma':      '#34d399',
+  'cdiscount.com':      '#f43f5e',
+}
+const srcColor = (s: string) => SRC_COLOR[s] ?? '#6366f1'
 
 const SOURCES = ['all', 'books.toscrape.com', 'scrapeme.live', 'jumia.ma', 'ultrapc.ma', 'micromagma.ma', 'cdiscount.com']
 
@@ -27,7 +51,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'title_asc',   label: 'Name A → Z' },
 ]
 
-function fmt(price: number, currency: string) {
+function fmtPrice(price: number, currency: string) {
   if (currency === 'MAD') return `${price.toLocaleString('fr-MA', { maximumFractionDigits: 2 })} MAD`
   try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(price) }
   catch { return `${price.toFixed(2)} ${currency}` }
@@ -67,6 +91,187 @@ function sortProducts(items: ProductPrice[], sort: SortKey): ProductPrice[] {
   })
 }
 
+// ── Market share donut ────────────────────────────────────────────────────────
+function MarketShareDonut({ stats }: { stats: SourceStats[] }) {
+  const total = stats.reduce((s, r) => s + r.product_count, 0)
+  const slices = stats.map(r => ({ name: r.source, value: r.product_count }))
+
+  const renderCenterLabel = ({ cx, cy }: any) => (
+    <text>
+      <tspan x={cx} y={cy - 10} textAnchor="middle" fontSize={22} fontWeight={800} fill="#f1f5f9">
+        {total.toLocaleString()}
+      </tspan>
+      <tspan x={cx} y={cy + 12} textAnchor="middle" fontSize={10} fill="#475569">
+        products
+      </tspan>
+    </text>
+  )
+
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-slate-200">Market Share</h3>
+        <span className="rounded-md border border-slate-700/50 bg-slate-800/50 px-2 py-0.5 text-xs font-semibold text-slate-500">
+          by product count
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <PieChart>
+          <Pie
+            data={slices}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={90}
+            paddingAngle={3}
+            dataKey="value"
+            labelLine={false}
+            label={renderCenterLabel}
+          >
+            {slices.map(s => (
+              <Cell key={s.name} fill={srcColor(s.name)} fillOpacity={0.85} stroke="transparent" />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, fontSize: 12 }}
+            formatter={(v: number, name: string) => [
+              `${v.toLocaleString()} (${((v / total) * 100).toFixed(1)}%)`,
+              name.split('.')[0],
+            ]}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+        {stats.map(r => (
+          <span key={r.source} className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="h-2 w-2 rounded-sm flex-shrink-0" style={{ background: srcColor(r.source) }} />
+            {r.source.split('.')[0]}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Price ranges chart ────────────────────────────────────────────────────────
+function PriceRangesChart({ stats }: { stats: SourceStats[] }) {
+  const data = stats.map(r => ({
+    name: r.source.split('.')[0],
+    Min:    +r.min_price.toFixed(2),
+    Avg:    +r.avg_price.toFixed(2),
+    Median: +r.median_price.toFixed(2),
+    Max:    +r.max_price.toFixed(2),
+  }))
+
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-slate-200">Price Ranges by Source</h3>
+        <span className="rounded-md border border-slate-700/50 bg-slate-800/50 px-2 py-0.5 text-xs font-semibold text-slate-500">
+          min · avg · median · max
+        </span>
+        <span className="ml-auto text-xs text-slate-600">currencies vary by source</span>
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} barGap={2} barCategoryGap="28%"
+                  margin={{ left: -4, right: 8, top: 4, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.08)" vertical={false} />
+          <XAxis dataKey="name" stroke="transparent"
+                 tick={{ fontSize: 10, fill: '#475569' }} tickLine={false} />
+          <YAxis stroke="transparent" tick={{ fontSize: 10, fill: '#475569' }} tickLine={false} width={40} />
+          <Tooltip
+            contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, fontSize: 12 }}
+            labelStyle={{ color: '#94a3b8' }}
+          />
+          <Legend wrapperStyle={{ fontSize: 11, color: '#475569', paddingTop: 8 }} />
+          <Bar dataKey="Min"    fill="#22d3ee" fillOpacity={0.8} radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Avg"    fill="#818cf8" fillOpacity={0.8} radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Median" fill="#34d399" fillOpacity={0.8} radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Max"    fill="#f87171" fillOpacity={0.8} radius={[3, 3, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ── Source intelligence table ─────────────────────────────────────────────────
+function SourceIntelligenceTable({ stats }: { stats: SourceStats[] }) {
+  const total = stats.reduce((s, r) => s + r.product_count, 0)
+  return (
+    <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800/60">
+        <h3 className="text-sm font-semibold text-slate-200">Source Intelligence</h3>
+        <span className="rounded-md border border-slate-700/50 bg-slate-800/50 px-2 py-0.5 text-xs font-semibold text-slate-500">
+          {stats.length} sources
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-800/40 bg-slate-900/40">
+              {['Source', 'Currency', 'Products', 'Avg Price', 'Min', 'Median', 'Max'].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {stats.sort((a, b) => b.product_count - a.product_count).map((r, i) => {
+              const pct = total > 0 ? (r.product_count / total) * 100 : 0
+              const col = srcColor(r.source)
+              return (
+                <tr key={r.source} className={clsx(
+                  'border-b border-slate-800/20',
+                  i % 2 === 0 ? 'bg-transparent' : 'bg-slate-900/20',
+                )}>
+                  <td className="px-4 py-3.5">
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: col }} />
+                      <span className="font-medium text-slate-200">{r.source}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-bold"
+                          style={{ color: col, borderColor: `${col}55`, background: `${col}15` }}>
+                      {r.currency}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-20 h-1 rounded-full bg-slate-800 overflow-hidden flex-shrink-0">
+                        <div className="h-full rounded-full transition-all"
+                             style={{ width: `${pct.toFixed(1)}%`, background: col }} />
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-slate-300">
+                        {r.product_count.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-slate-600">({pct.toFixed(1)}%)</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 font-mono text-sm font-bold" style={{ color: col }}>
+                    {r.avg_price.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3.5 font-mono text-sm text-emerald-400 font-semibold">
+                    {r.min_price.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3.5 font-mono text-sm text-slate-400">
+                    {r.median_price.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3.5 font-mono text-sm text-rose-400 font-semibold">
+                    {r.max_price.toFixed(2)}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function LivePrices() {
   const nav = useNavigate()
   const [source, setSource]             = useState('all')
@@ -83,6 +288,12 @@ export default function LivePrices() {
       search: debouncedSearch || undefined,
       limit: 300,
     }),
+  })
+
+  const { data: statsData } = useQuery({
+    queryKey: ['stats'],
+    queryFn: api.stats,
+    staleTime: 5 * 60 * 1000,
   })
 
   const handleSearch = (v: string) => {
@@ -149,26 +360,53 @@ export default function LivePrices() {
         </div>
       </div>
 
-      {/* Source filter chips */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 text-slate-600 mr-1" />
-        {SOURCES.map(s => (
-          <button
-            key={s}
-            onClick={() => setSource(s)}
-            className={clsx(
-              'rounded-full border px-3.5 py-1 text-xs font-medium transition',
-              source === s
-                ? 'border-indigo-500/40 bg-indigo-500/15 text-indigo-300'
-                : 'border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
-            )}
-          >
-            {s === 'all' ? 'All Sources' : s}
-          </button>
-        ))}
+      {/* ── Market overview charts ── */}
+      {statsData && statsData.length > 0 && (
+        <div className="mb-6 space-y-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <MarketShareDonut stats={statsData} />
+            <PriceRangesChart stats={statsData} />
+          </div>
+          <SourceIntelligenceTable stats={statsData} />
+        </div>
+      )}
+
+      {/* ── Source filter chips (below charts, above product table) ── */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <SlidersHorizontal className="h-3.5 w-3.5 text-slate-600 mr-1 flex-shrink-0" />
+        <button
+          onClick={() => setSource('all')}
+          className={clsx(
+            'rounded-full border px-3.5 py-1 text-xs font-medium transition',
+            source === 'all'
+              ? 'border-indigo-500/40 bg-indigo-500/15 text-indigo-300'
+              : 'border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
+          )}
+        >
+          All Sources
+        </button>
+        {(statsData ?? SOURCES.filter(s => s !== 'all').map(s => ({ source: s }))).map((item) => {
+          const s = typeof item === 'string' ? item : (item as any).source
+          const col = srcColor(s)
+          const active = source === s
+          return (
+            <button
+              key={s}
+              onClick={() => setSource(s)}
+              className={clsx(
+                'flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-medium transition',
+                active ? 'text-slate-100' : 'border-slate-800 text-slate-500 hover:border-slate-600 hover:text-slate-300'
+              )}
+              style={active ? { borderColor: `${col}66`, background: `${col}18`, color: col } : {}}
+            >
+              <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: col }} />
+              {s}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Table */}
+      {/* ── Product table ── */}
       <div className="overflow-hidden rounded-2xl border border-slate-800/60 bg-slate-900/40">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -203,7 +441,7 @@ export default function LivePrices() {
                   </td>
                   <td className="px-4 py-3.5">
                     <span className="font-mono text-sm font-semibold text-gradient">
-                      {fmt(p.price, p.currency)}
+                      {fmtPrice(p.price, p.currency)}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-slate-500 text-xs">
