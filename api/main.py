@@ -207,6 +207,34 @@ def get_stats() -> list[SourceStats]:
 
 
 # ---------------------------------------------------------------------------
+# Statistical Analysis
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/analysis/descriptive", tags=["analysis"])
+def get_descriptive():
+    from api import analysis  # noqa: PLC0415
+    return analysis.descriptive()
+
+
+@app.get("/api/v1/analysis/tests", tags=["analysis"])
+def get_tests():
+    from api import analysis  # noqa: PLC0415
+    return analysis.hypothesis_tests()
+
+
+@app.get("/api/v1/analysis/regression", tags=["analysis"])
+def get_regression():
+    from api import analysis  # noqa: PLC0415
+    return analysis.regression()
+
+
+@app.get("/api/v1/analysis/histogram", tags=["analysis"])
+def get_histogram():
+    from api import analysis  # noqa: PLC0415
+    return analysis.histogram()
+
+
+# ---------------------------------------------------------------------------
 # Alerts
 # ---------------------------------------------------------------------------
 

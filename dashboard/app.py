@@ -43,6 +43,8 @@ SOURCE_META = {
     "ultrapc.ma":         {"color": "#22d3ee", "bg": "#071a1c", "label": "UltraPC.ma",     "icon": "💻"},
     "micromagma_ma":      {"color": "#34d399", "bg": "#071c14", "label": "Micromagma.ma",  "icon": "🖥️"},
     "micromagma.ma":      {"color": "#34d399", "bg": "#071c14", "label": "Micromagma.ma",  "icon": "🖥️"},
+    "cdiscount":          {"color": "#f43f5e", "bg": "#1c0511", "label": "CDiscount.com",  "icon": "🏪"},
+    "cdiscount.com":      {"color": "#f43f5e", "bg": "#1c0511", "label": "CDiscount.com",  "icon": "🏪"},
 }
 DEFAULT_META = {"color": "#94a3b8", "bg": "#1e293b", "label": "Unknown", "icon": "🔷"}
 
@@ -957,45 +959,150 @@ def page_live():
         st.markdown('<div style="text-align:center;color:#475569;padding:2rem">No products match the current filters.</div>', unsafe_allow_html=True)
         return
 
-    # ── Charts ─────────────────────────────────────────────────────────────────
+    # ── Charts row 1: Distribution + Market share ────────────────────────────
     ch1, ch2 = st.columns([3, 2])
     with ch1:
         sec("Price distribution", badge="violin · log scale", icon="📊")
-        # log_y=True causes Plotly.js to silently abort the entire trace when
-        # any price is 0 (log(0) = -∞).  Filter first; show fallback if empty.
         violin_df = filtered[filtered["price"] > 0].copy()
         if violin_df.empty:
             st.info("No products with positive prices for the current filters.")
         else:
-            fig = px.violin(violin_df, x="source", y="price", color="source",
-                            color_discrete_map=SOURCE_COLORS, box=True, points="outliers",
-                            log_y=True, labels={"price":"Price (log)","source":""})
-            fig.update_traces(meanline_visible=True, line_width=1.5)
+            violin_df["_lbl"] = violin_df["source"].map(lambda s: src_meta(s)["label"])
+            lbl_color = {src_meta(s)["label"]: SOURCE_COLORS.get(s, "#94a3b8")
+                         for s in violin_df["source"].unique()}
+            lbl_order = (violin_df.groupby("_lbl").size()
+                         .sort_values(ascending=False).index.tolist())
+            fig = px.violin(
+                violin_df, x="_lbl", y="price", color="_lbl",
+                color_discrete_map=lbl_color, box=True, points="suspectedoutliers",
+                log_y=True, category_orders={"_lbl": lbl_order},
+                labels={"price": "Price (log scale)", "_lbl": ""},
+            )
+            fig.update_traces(meanline_visible=True, line_width=1.5, opacity=0.88)
             fig.update_layout(showlegend=False)
-            st.plotly_chart(chart(fig, 320), use_container_width=True)
+            st.plotly_chart(chart(fig, 340), use_container_width=True)
 
     with ch2:
-        sec("Market share", badge="by source", icon="🍩")
+        sec("Market share", badge="by product count", icon="🍩")
         share = filtered.groupby("source").size().reset_index(name="n")
         if share.empty:
             st.info("No data for the current filters.")
         else:
-            fig2 = px.pie(share, values="n", names="source",
-                          color="source", color_discrete_map=SOURCE_COLORS, hole=0.6)
-            # textposition="outside" + the 16px CHART_BASE margins push labels
-            # past the container edge → they get CSS-clipped and the chart looks
-            # blank.  "inside"+"percent" keeps everything within the donut ring;
-            # the legend (styled by CHART_BASE) identifies each source.
-            fig2.update_traces(textposition="inside", textinfo="percent",
-                               textfont=dict(size=11, color="#f1f5f9"),
-                               marker_line_color="#07101f", marker_line_width=2,
-                               pull=[0.02]*len(share))
+            share["_lbl"] = share["source"].map(lambda s: src_meta(s)["label"])
+            lbl_color2 = {src_meta(s)["label"]: SOURCE_COLORS.get(s, "#94a3b8")
+                          for s in share["source"]}
+            total_n = int(share["n"].sum())
+            fig2 = px.pie(
+                share, values="n", names="_lbl",
+                color="_lbl", color_discrete_map=lbl_color2, hole=0.62,
+            )
+            fig2.update_traces(
+                textposition="inside", textinfo="percent",
+                textfont=dict(size=11, color="#f1f5f9"),
+                marker_line_color="#07101f", marker_line_width=2,
+                pull=[0.025] * len(share),
+            )
+            fig2.add_annotation(
+                text=f"<b>{total_n:,}</b><br>products",
+                x=0.5, y=0.5, showarrow=False,
+                font=dict(size=14, color="#e2e8f0"), align="center",
+            )
             fig2.update_layout(showlegend=True)
-            st.plotly_chart(chart(fig2, 320), use_container_width=True)
+            st.plotly_chart(chart(fig2, 340), use_container_width=True)
 
-    # ── Progress bars (source breakdown) ─────────────────────────────────────
-    src_counts = filtered.groupby("source").size().reset_index(name="count").sort_values("count", ascending=False)
-    progress_bars(src_counts, "source", "count", "Source breakdown")
+    # ── Chart row 2: Price ranges per source ─────────────────────────────────
+    sec("Price ranges by source", badge="min · avg · median · max  ·  note: currencies vary", icon="📉")
+    src_stats = (
+        filtered.groupby("source")["price"]
+        .agg(Min="min", Avg="mean", Median="median", Max="max")
+        .round(2)
+        .reset_index()
+    )
+    src_stats["_lbl"] = src_stats["source"].map(lambda s: src_meta(s)["label"])
+    melted_r = src_stats.melt(
+        id_vars=["source", "_lbl"],
+        value_vars=["Min", "Avg", "Median", "Max"],
+        var_name="metric", value_name="price",
+    )
+    fig_r = px.bar(
+        melted_r, x="_lbl", y="price", color="metric", barmode="group",
+        color_discrete_map={"Min": "#22d3ee", "Avg": "#818cf8", "Median": "#34d399", "Max": "#f87171"},
+        labels={"price": "Price (native currency)", "_lbl": "", "metric": ""},
+        text="price",
+    )
+    fig_r.update_traces(
+        texttemplate="%{text:.0f}", textposition="outside",
+        marker_line_width=0, textfont_size=9, textfont_color="#94a3b8",
+    )
+    fig_r.update_layout(showlegend=True, bargap=0.2, bargroupgap=0.06)
+    st.plotly_chart(chart(fig_r, 320), use_container_width=True)
+
+    # ── Source intelligence table ─────────────────────────────────────────────
+    sec("Source intelligence", icon="🏪")
+    src_tbl = (
+        filtered.groupby("source")
+        .agg(
+            products=("price", "count"),
+            avg=("price", "mean"),
+            min_p=("price", "min"),
+            max_p=("price", "max"),
+            currency=("currency", lambda x: x.mode().iloc[0] if not x.empty else ""),
+        )
+        .round(2)
+        .reset_index()
+        .sort_values("products", ascending=False)
+    )
+    total_p = src_tbl["products"].sum()
+    rows_html = ""
+    for i, (_, r) in enumerate(src_tbl.iterrows()):
+        m   = src_meta(r["source"])
+        pct = r["products"] / total_p * 100 if total_p > 0 else 0
+        bg  = "#0d1829" if i % 2 == 0 else "#0a1426"
+        rows_html += f"""
+        <tr style="border-bottom:1px solid #1a264022;background:{bg}">
+          <td style="padding:0.7rem 1rem;white-space:nowrap;min-width:160px">
+            <span style="display:inline-flex;align-items:center;gap:7px">
+              <span style="font-size:1.05rem">{m['icon']}</span>
+              <span style="font-weight:600;color:#e2e8f0;font-size:0.85rem">{m['label']}</span>
+            </span>
+          </td>
+          <td style="padding:0.7rem 1rem">
+            <span style="background:{m['bg']};color:{m['color']};border:1px solid {m['color']}55;
+                         border-radius:20px;padding:2px 9px;font-size:0.68rem;font-weight:700;
+                         letter-spacing:0.05em">{r['currency']}</span>
+          </td>
+          <td style="padding:0.7rem 1rem;min-width:180px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:0 0 80px;height:4px;background:#1a2640;border-radius:2px;overflow:hidden">
+                <div style="width:{pct:.1f}%;height:100%;background:linear-gradient(90deg,{m['color']},{m['color']}66);border-radius:2px"></div>
+              </div>
+              <span style="font-family:monospace;font-size:0.82rem;color:#94a3b8;font-weight:600">{r['products']:,}</span>
+              <span style="font-size:0.68rem;color:#334155">({pct:.1f}%)</span>
+            </div>
+          </td>
+          <td style="padding:0.7rem 1rem;font-family:monospace;font-size:0.84rem;
+                     color:{m['color']};font-weight:700">{r['avg']:.2f}</td>
+          <td style="padding:0.7rem 1rem;font-family:monospace;font-size:0.82rem;
+                     color:#34d399;font-weight:600">{r['min_p']:.2f}</td>
+          <td style="padding:0.7rem 1rem;font-family:monospace;font-size:0.82rem;
+                     color:#f87171;font-weight:600">{r['max_p']:.2f}</td>
+        </tr>"""
+
+    th = lambda h: (f'<th style="padding:0.6rem 1rem;text-align:left;font-size:0.62rem;'
+                    f'font-weight:700;letter-spacing:0.1em;text-transform:uppercase;'
+                    f'color:#334155">{h}</th>')
+    st.markdown(f"""
+    <div style="overflow:hidden;border-radius:14px;border:1px solid #1a2640;margin-top:0.5rem">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#0a1426;border-bottom:1px solid #1a2640">
+            {th("Source")}{th("Currency")}{th("Products")}{th("Avg Price")}{th("Min")}{th("Max")}
+          </tr>
+        </thead>
+        <tbody>{rows_html}</tbody>
+      </table>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ── Product table ─────────────────────────────────────────────────────────
     sec("Product catalogue", badge=f"{len(filtered):,} results", icon="🗂️")
@@ -1040,7 +1147,7 @@ def page_kpis():
                 med = row.get("median_price", row.get("avg_price", 0))
                 sd  = row.get("stddev_price", 0)
                 cur = row.get("currency","")
-                kpi(src.replace("_"," ").title(), f"{avg:.2f} {cur}",
+                kpi(src_meta(src)["label"], f"{avg:.2f} {cur}",
                     sub=f"median {med:.2f} · σ {sd:.2f}",
                     icon=icon_seq[i % len(icon_seq)],
                     color=accent_seq[i % len(accent_seq)])
@@ -1168,13 +1275,19 @@ def page_stats():
                          column_config={c: st.column_config.NumberColumn(c, format="%.2f")
                                         for c in desc.select_dtypes("number").columns})
 
+        # Add pretty label column for charts
+        df["_lbl"] = df["source"].map(lambda s: src_meta(s)["label"])
+        lbl_color = {src_meta(s)["label"]: SOURCE_COLORS.get(s, "#94a3b8")
+                     for s in df["source"].unique()}
+
         ca, cb = st.columns(2)
         with ca:
-            sec("Distribution", badge="log scale", icon="📉")
-            fh = px.histogram(df, x="price", color="source", barmode="overlay",
+            sec("Distribution", badge="log scale · stacked", icon="📉")
+            fh = px.histogram(df, x="price", color="_lbl", barmode="overlay",
                               opacity=0.65, log_x=True, nbins=55,
-                              color_discrete_map=SOURCE_COLORS,
-                              labels={"price":"Price (log)"})
+                              color_discrete_map=lbl_color,
+                              labels={"price":"Price (log)", "_lbl":"Source"})
+            fh.update_layout(legend_title_text="")
             st.plotly_chart(chart(fh, 290), use_container_width=True)
         with cb:
             sec("Coefficient of variation", badge="volatility %", icon="📊")
@@ -1182,19 +1295,22 @@ def page_stats():
                 lambda s: round(s.std()/s.mean()*100,1) if s.mean()>0 else 0
             ).reset_index()
             vol.columns = ["source","cv"]
+            vol["_lbl"] = vol["source"].map(lambda s: src_meta(s)["label"])
             vol = vol.sort_values("cv", ascending=False)
-            fv = px.bar(vol, x="source", y="cv", color="source",
-                        color_discrete_map=SOURCE_COLORS, text="cv",
-                        labels={"cv":"CV (%)","source":""})
+            lbl_color_vol = {src_meta(s)["label"]: SOURCE_COLORS.get(s, "#94a3b8")
+                             for s in vol["source"]}
+            fv = px.bar(vol, x="_lbl", y="cv", color="_lbl",
+                        color_discrete_map=lbl_color_vol, text="cv",
+                        labels={"cv":"CV (%)","_lbl":""})
             fv.update_traces(texttemplate="%{text:.1f}%", textposition="outside", marker_line_width=0)
             fv.update_layout(showlegend=False)
             st.plotly_chart(chart(fv, 290), use_container_width=True)
 
         # Box plot
-        sec("Box plots", badge="all sources", icon="📦")
-        fb2 = px.box(df, x="source", y="price", color="source",
-                     color_discrete_map=SOURCE_COLORS, points="outliers",
-                     log_y=True, labels={"price":"Price (log)","source":""})
+        sec("Box plots", badge="all sources · log scale", icon="📦")
+        fb2 = px.box(df, x="_lbl", y="price", color="_lbl",
+                     color_discrete_map=lbl_color, points="outliers",
+                     log_y=True, labels={"price":"Price (log)","_lbl":""})
         fb2.update_layout(showlegend=False)
         st.plotly_chart(chart(fb2, 320), use_container_width=True)
 
@@ -1210,8 +1326,8 @@ def page_stats():
             norm_rows = []
             for src, g in groups.items():
                 w, p = scipy_stats.shapiro(g.head(5000))
-                norm_rows.append({"Source":src,"n":len(g),"W":round(w,4),
-                                   "p-value":round(p,6),
+                norm_rows.append({"Source": src_meta(src)["label"], "n":len(g),
+                                   "W":round(w,4), "p-value":round(p,6),
                                    "Normal":"✅  Yes" if p>=0.05 else "❌  No"})
             st.dataframe(pd.DataFrame(norm_rows), use_container_width=True, hide_index=True)
 
@@ -1251,13 +1367,16 @@ def page_stats():
             # Mann-Whitney pairwise + heatmap
             sec("Pairwise Mann-Whitney U", badge="two-sided", icon="🔗")
             src_list  = list(groups.keys())
+            lbl_list  = [src_meta(s)["label"] for s in src_list]
             mw_rows   = []
             heat_data = {s:{s2:1.0 for s2 in src_list} for s in src_list}
             for a, b in itertools.combinations(src_list, 2):
                 u, p_mw = scipy_stats.mannwhitneyu(groups[a], groups[b], alternative="two-sided")
                 n1, n2  = len(groups[a]), len(groups[b])
                 r_eff   = round(1 - (2*u)/(n1*n2), 3)
-                mw_rows.append({"Source A":a,"Source B":b,"U":round(u,0),
+                mw_rows.append({"Source A": src_meta(a)["label"],
+                                 "Source B": src_meta(b)["label"],
+                                 "U":round(u,0),
                                  "p-value":round(p_mw,6),"Effect r":r_eff,
                                  "Significant":"✅" if p_mw<0.05 else "❌"})
                 heat_data[a][b] = p_mw
@@ -1271,7 +1390,7 @@ def page_stats():
                 z    = [[heat_data[r][c] for c in src_list] for r in src_list]
                 f_hm = go.Figure(go.Heatmap(
                     z=np.log10(np.array(z)+1e-10),
-                    x=src_list, y=src_list,
+                    x=lbl_list, y=lbl_list,
                     colorscale="RdBu",
                     hovertemplate="%{y} vs %{x}<br>log10(p)=%{z:.2f}<extra></extra>",
                     colorbar=dict(tickfont=dict(color="#64748b",size=10),
@@ -1287,20 +1406,22 @@ def page_stats():
             for src, g in groups.items():
                 n, se   = len(g), scipy_stats.sem(g)
                 lo, hi  = scipy_stats.t.interval(0.95, df=n-1, loc=g.mean(), scale=se)
-                ci_rows.append({"Source":src,"n":n,"Mean":round(g.mean(),2),
+                ci_rows.append({"Source": src_meta(src)["label"],
+                                 "_src": src,
+                                 "n":n,"Mean":round(g.mean(),2),
                                  "Lower":round(lo,2),"Upper":round(hi,2),
                                  "Width":round(hi-lo,2)})
             ci_df = pd.DataFrame(ci_rows)
 
             col_ci, col_forest = st.columns([1, 2])
             with col_ci:
-                st.dataframe(ci_df, use_container_width=True, hide_index=True)
+                st.dataframe(ci_df.drop(columns=["_src"]), use_container_width=True, hide_index=True)
             with col_forest:
                 fig_ci = go.Figure()
                 for _, row in ci_df.iterrows():
-                    col = SOURCE_COLORS.get(row["Source"], "#6366f1")
+                    col = SOURCE_COLORS.get(row["_src"], "#6366f1")
                     fig_ci.add_trace(go.Scatter(
-                        x=[row["Lower"], row["Upper"]], y=[row["Source"],row["Source"]],
+                        x=[row["Lower"], row["Upper"]], y=[row["Source"], row["Source"]],
                         mode="lines", line=dict(width=6, color=col), showlegend=False))
                     fig_ci.add_trace(go.Scatter(
                         x=[row["Mean"]], y=[row["Source"]],
@@ -1334,10 +1455,15 @@ def page_stats():
             st.markdown("<div style='margin:0.8rem 0'></div>", unsafe_allow_html=True)
 
             # Scatter with OLS
-            fig_r = px.scatter(reg_df, x="rating", y="price", color="source",
-                               color_discrete_map=SOURCE_COLORS, opacity=0.5,
-                               trendline="ols", labels={"price":"Price","rating":"Rating"})
+            reg_df["_lbl"] = reg_df["source"].map(lambda s: src_meta(s)["label"])
+            lbl_color_reg = {src_meta(s)["label"]: SOURCE_COLORS.get(s, "#94a3b8")
+                             for s in reg_df["source"].unique()}
+            fig_r = px.scatter(reg_df, x="rating", y="price", color="_lbl",
+                               color_discrete_map=lbl_color_reg, opacity=0.5,
+                               trendline="ols",
+                               labels={"price":"Price","rating":"Rating","_lbl":"Source"})
             fig_r.update_traces(marker_size=6)
+            fig_r.update_layout(legend_title_text="")
             st.plotly_chart(chart(fig_r, 400), use_container_width=True)
 
             # Per-source table
@@ -1347,7 +1473,8 @@ def page_stats():
                 gf = g.dropna(subset=["price","rating"])
                 if len(gf) < 5: continue
                 sl,ic,rv,pv,sv = scipy_stats.linregress(gf["rating"], gf["price"])
-                reg_rows.append({"Source":src,"n":len(gf),"Slope":round(sl,4),
+                reg_rows.append({"Source": src_meta(src)["label"],
+                                  "n":len(gf),"Slope":round(sl,4),
                                   "Intercept":round(ic,2),"R":round(rv,4),
                                   "R²":round(rv**2,4),"p-value":round(pv,6),
                                   "Sig":"✅" if pv<0.05 else "❌"})
