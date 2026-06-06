@@ -135,7 +135,7 @@
 ---
 
 ## Member 3 — Cloud Infrastructure & Monitoring
-**Name:** [Team Member 3]
+**Name:** ABDOU HABOU MAHAMED
 **Elevator pitch:** *"I own the production runtime layer — the Kubernetes manifests that deploy every service to the cloud, and the Prometheus/Grafana stack that monitors them once they are running."*
 
 ### Talking Points
