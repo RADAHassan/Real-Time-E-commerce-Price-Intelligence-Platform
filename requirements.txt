@@ -16,17 +16,17 @@ google-cloud-bigquery==3.21.0
 google-auth==2.29.0
 
 # Data
-pandas==2.2.2
-numpy==1.26.4
+pandas==3.0.3
+numpy==2.4.6
 
 # Analytics
-scipy==1.13.0
+scipy==1.17.1
 statsmodels==0.14.2
 pingouin==0.5.4
 
 # Dashboard
 streamlit==1.33.0
-plotly==5.20.0
+plotly==6.8.0
 
 # Sink HTTP service (Phase 3)
 fastapi==0.111.0
