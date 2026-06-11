@@ -17,9 +17,9 @@
         │
         │  HANDOFF B — "The clean mart tables are in BigQuery. Docker images are built. Time to deploy."
         ▼
-[Member 3] Cloud Infrastructure & Monitoring
+[Member 3] DevOps
         │
-        │  HANDOFF C — "Services are running on Kubernetes and observable in Grafana."
+        │  HANDOFF C — "Services are deployed on Kubernetes and observable in Grafana."
         ▼
 [Member 4] Full Stack Development
         │
@@ -134,9 +134,9 @@
 
 ---
 
-## Member 3 — Cloud Infrastructure & Monitoring
+## Member 3 — DevOps
 **Name:** ABDOU HABOU MAHAMED
-**Elevator pitch:** *"I own the production runtime layer — the Kubernetes manifests that deploy every service to the cloud, and the Prometheus/Grafana stack that monitors them once they are running."*
+**Elevator pitch:** *"I own the deployment and monitoring layer — the Kubernetes manifests that deploy every service to production, and the Prometheus/Grafana stack that monitors them once they are running."*
 
 ### Talking Points
 
@@ -217,7 +217,7 @@
 |---|---|---|---|
 | **A** | Member 1 (Ingest) | Member 2 (Transform) | Raw table `price_intelligence_raw.prices` in BigQuery, JSONL files on disk |
 | **B** | Member 2 (Transform) | Member 3 (DevOps) | 4 mart tables in `price_intelligence_marts`, `dbt docs` site |
-| **C** | Member 3 (DevOps) | Member 4 (Full Stack) | Running Docker containers (API :8000, Dashboard :8501, Frontend :3000), Cloud Run URLs |
+| **C** | Member 3 (DevOps) | Member 4 (Full Stack) | Running Kubernetes pods (API :8000, Dashboard :8501, Frontend :3000), Cloud Run URLs |
 
 ---
 
@@ -241,7 +241,7 @@
 | Introduction — what the project does, architecture overview | 2 min | Any member (or rotate) |
 | Member 1 — Data Engineering, DataOps & CI/CD | 6 min | Hassan RADAH |
 | Member 2 — Data Analytics & Transformation | 5 min | Khaoula BELAJAL |
-| Member 3 — Cloud Infrastructure & Monitoring | 4 min | [Team Member 3] |
+| Member 3 — DevOps | 4 min | ABDOU HABOU MAHAMED |
 | Member 4 — Full Stack Development | 5 min | Mohamed KANTOS |
 | Q&A | 3 min | All |
 
