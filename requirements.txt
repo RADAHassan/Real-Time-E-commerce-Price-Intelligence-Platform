@@ -11,9 +11,9 @@ lxml==5.2.1
 fake-useragent==1.5.1
 
 # Google Cloud
-google-cloud-bigtable==2.23.0
-google-cloud-bigquery==3.21.0
-google-auth==2.29.0
+google-cloud-bigtable==2.38.0
+google-cloud-bigquery==3.41.0
+google-auth==2.54.0
 
 # Data
 pandas==2.2.2
