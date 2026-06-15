@@ -28,4 +28,4 @@ dbt-core==1.8.0
 great-expectations==0.18.14
 
 # Type checking
-mypy==1.10.0
+mypy==2.1.0
